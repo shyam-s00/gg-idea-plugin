@@ -4,20 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="feat: initial plugin scaffolding">
-      <change afterPath="$PROJECT_DIR$/.idea/kotlinc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/services/BinaryManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/services/BinaryManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideConfigurable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideConfigurable.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideSettings.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideSettings.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/pluginIcon.svg" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/pluginIcon.svg" afterDir="false" />
-    </list>
+    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="feat: Add plugin with gg bin" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -121,7 +108,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1774190477358</updated>
-      <workItem from="1774190478830" duration="20417000" />
+      <workItem from="1774190478830" duration="20962000" />
     </task>
     <task id="LOCAL-00001" summary="chore: add .gitignore">
       <option name="closed" value="true" />
@@ -139,7 +126,15 @@
       <option name="project" value="LOCAL" />
       <updated>1774196250233</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="feat: Add plugin with gg bin">
+      <option name="closed" value="true" />
+      <created>1774491423733</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1774491423733</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -148,7 +143,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="chore: add .gitignore" />
     <MESSAGE value="feat: initial plugin scaffolding" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: initial plugin scaffolding" />
+    <MESSAGE value="feat: Add plugin with gg bin" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: Add plugin with gg bin" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
