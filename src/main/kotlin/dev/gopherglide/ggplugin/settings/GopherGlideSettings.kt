@@ -1,0 +1,24 @@
+package dev.gopherglide.ggplugin.settings
+
+import com.intellij.openapi.components.*
+import com.intellij.util.xmlb.XmlSerializerUtil
+
+@State(
+    name = "dev.gopherglide.ggplugin.settings.GopherGlideSettings",
+    storages = [Storage("GopherGlideSettings.xml")]
+)
+@Service(Service.Level.APP)
+class GopherGlideSettings : PersistentStateComponent<GopherGlideSettings> {
+    var customBinaryPath: String = ""
+
+    override fun getState(): GopherGlideSettings = this
+
+    override fun loadState(state: GopherGlideSettings) {
+        XmlSerializerUtil.copyBean(state, this)
+    }
+
+    companion object {
+        val instance: GopherGlideSettings
+            get() = service()
+    }
+}

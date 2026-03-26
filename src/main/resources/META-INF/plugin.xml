@@ -1,8 +1,8 @@
 <!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-    <id>io.gopherglide.intellij.gg-idea-plugin</id>
+    <id>dev.gopherglide.gg-plugin</id>
 
-    <name>Gopher Glide</name>
+    <name>Gopher Glide Plugin</name>
 
     <vendor url="https://github.com/shyam/gopher-glide">Gopher Glide</vendor>
 
@@ -18,25 +18,25 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable
             parentId="tools"
-            instance="io.gopherglide.intellij.ggideaplugin.settings.GopherGlideConfigurable"
-            id="io.gopherglide.intellij.ggideaplugin.settings.GopherGlideConfigurable"
+            instance="dev.gopherglide.ggplugin.settings.GopherGlideConfigurable"
+            id="dev.gopherglide.ggplugin.settings.GopherGlideConfigurable"
             displayName="Gopher Glide"/>
 
-        <json.schemaProviderFactory implementation="io.gopherglide.intellij.ggideaplugin.schema.GopherGlideJsonSchemaProviderFactory"/>
+        <json.schemaProviderFactory implementation="dev.gopherglide.ggplugin.schema.GopherGlideJsonSchemaProviderFactory"/>
 
-        <psi.referenceContributor language="yaml" implementation="io.gopherglide.intellij.ggideaplugin.psi.YamlFileReferenceContributor"/>
+        <psi.referenceContributor language="yaml" implementation="dev.gopherglide.ggplugin.psi.YamlFileReferenceContributor"/>
 
-        <runLineMarkerContributor language="yaml" implementationClass="io.gopherglide.intellij.ggideaplugin.execution.GopherGlideRunLineMarkerContributor"/>
+        <runLineMarkerContributor language="yaml" implementationClass="dev.gopherglide.ggplugin.execution.GopherGlideRunLineMarkerContributor"/>
 
-        <runLineMarkerContributor language="any" implementationClass="io.gopherglide.intellij.ggideaplugin.execution.HttpGopherGlideRunLineMarkerContributor"/>
+        <runLineMarkerContributor language="any" implementationClass="dev.gopherglide.ggplugin.execution.HttpGopherGlideRunLineMarkerContributor"/>
     </extensions>
 
     <actions>
-        <action id="GopherGlide.Run" class="io.gopherglide.intellij.ggideaplugin.execution.RunGopherGlideAction" text="Run Load Test" description="Run Gopher-Glide load test" icon="AllIcons.Actions.Execute">
+        <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run Load Test" description="Run Gopher-Glide load test" icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
-        <action id="GopherGlide.RunHttp" class="io.gopherglide.intellij.ggideaplugin.execution.RunGopherGlideHttpAction" text="Run Gopher-Glide Load Test" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute">
+        <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run Gopher-Glide Load Test" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>

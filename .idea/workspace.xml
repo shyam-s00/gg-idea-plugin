@@ -4,7 +4,36 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="feat: Add plugin with gg bin" />
+    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="build: try cleaning up some folders">
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/MyMessageBundle.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/MyToolWindow.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/GopherGlideRunLineMarkerContributor.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/HttpGopherGlideRunLineMarkerContributor.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/RunGopherGlideAction.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/RunGopherGlideHttpAction.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/TerminalExecutor.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/psi/YamlFileReferenceContributor.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/schema/GopherGlideJsonSchemaProviderFactory.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/services/BinaryManager.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/settings/GopherGlideConfigurable.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/settings/GopherGlideSettings.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/MyMessageBundle.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/MyMessageBundle.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/MyToolWindow.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/MyToolWindow.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/GopherGlideRunLineMarkerContributor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/GopherGlideRunLineMarkerContributor.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/HttpGopherGlideRunLineMarkerContributor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/HttpGopherGlideRunLineMarkerContributor.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/RunGopherGlideAction.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/RunGopherGlideAction.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/RunGopherGlideHttpAction.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/RunGopherGlideHttpAction.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/TerminalExecutor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/execution/TerminalExecutor.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/psi/YamlFileReferenceContributor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/psi/YamlFileReferenceContributor.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/schema/GopherGlideJsonSchemaProviderFactory.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/schema/GopherGlideJsonSchemaProviderFactory.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/services/BinaryManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/services/BinaryManager.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideConfigurable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideConfigurable.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideSettings.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/io/gopherglide/intellij/ggideaplugin/settings/GopherGlideSettings.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -108,7 +137,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1774190477358</updated>
-      <workItem from="1774190478830" duration="20962000" />
+      <workItem from="1774190478830" duration="29108000" />
     </task>
     <task id="LOCAL-00001" summary="chore: add .gitignore">
       <option name="closed" value="true" />
@@ -134,7 +163,31 @@
       <option name="project" value="LOCAL" />
       <updated>1774491423733</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="feat: build action">
+      <option name="closed" value="true" />
+      <created>1774491894991</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1774491894991</updated>
+    </task>
+    <task id="LOCAL-00005" summary="build: add plugin verification step">
+      <option name="closed" value="true" />
+      <created>1774492522770</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1774492522770</updated>
+    </task>
+    <task id="LOCAL-00006" summary="build: try cleaning up some folders">
+      <option name="closed" value="true" />
+      <created>1774493591408</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1774493591408</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -144,7 +197,10 @@
     <MESSAGE value="chore: add .gitignore" />
     <MESSAGE value="feat: initial plugin scaffolding" />
     <MESSAGE value="feat: Add plugin with gg bin" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat: Add plugin with gg bin" />
+    <MESSAGE value="feat: build action" />
+    <MESSAGE value="build: add plugin verification step" />
+    <MESSAGE value="build: try cleaning up some folders" />
+    <option name="LAST_COMMIT_MESSAGE" value="build: try cleaning up some folders" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

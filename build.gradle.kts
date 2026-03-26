@@ -4,7 +4,7 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.10.2"
 }
 
-group = "io.gopherglide.intellij"
+group = "dev.gopherglide.gg-plugin"
 version = "1.0-SNAPSHOT"
 
 repositories {
