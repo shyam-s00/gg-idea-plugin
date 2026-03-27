@@ -1,14 +1,15 @@
 package dev.gopherglide.ggplugin.execution
 
 import com.intellij.openapi.project.Project
-import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import dev.gopherglide.ggplugin.services.BinaryManager
+import org.jetbrains.plugins.terminal.TerminalToolWindowManager
+import com.intellij.terminal.ui.TerminalWidget
 
 object TerminalExecutor {
     fun execute(project: Project, configPath: String) {
         val binaryManager = BinaryManager.instance
         val binaryPath = binaryManager.resolveBinaryPath()
-        
+
         if (binaryPath == null) {
             binaryManager.downloadLatestRelease().thenAccept { downloadedPath ->
                 runInTerminal(project, downloadedPath, configPath)
@@ -24,8 +25,10 @@ object TerminalExecutor {
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
             try {
                 val terminalManager = TerminalToolWindowManager.getInstance(project)
-                val command = listOf(binaryPath, configPath)
-                terminalManager.createNewSession(project.basePath, "Gopher-Glide", command, true, true)
+                val widget: TerminalWidget = terminalManager.createNewSession()
+                widget.terminalTitle.change { this.userDefinedTitle = "Gopher-Glide" }
+                val command = "\"$binaryPath\" \"$configPath\""
+                widget.sendCommandToExecute(command)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
