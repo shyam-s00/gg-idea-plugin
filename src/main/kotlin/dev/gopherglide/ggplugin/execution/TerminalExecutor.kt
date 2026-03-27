@@ -24,10 +24,8 @@ object TerminalExecutor {
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater {
             try {
                 val terminalManager = TerminalToolWindowManager.getInstance(project)
-                val widget = terminalManager.createShellWidget(project.basePath, "Gopher-Glide", true, true)
-                
-                val command = "\"$binaryPath\" \"$configPath\""
-                widget.sendCommandToExecute(command)
+                val command = listOf(binaryPath, configPath)
+                terminalManager.createNewSession(project.basePath, "Gopher-Glide", command, true, true)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

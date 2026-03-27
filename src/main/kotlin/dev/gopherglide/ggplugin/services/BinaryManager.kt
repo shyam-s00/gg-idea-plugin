@@ -9,6 +9,7 @@ import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.util.io.Decompressor
 import com.intellij.util.io.HttpRequests
+import com.intellij.util.system.CpuArch
 import dev.gopherglide.ggplugin.settings.GopherGlideSettings
 import java.io.File
 import java.nio.file.Files
@@ -80,7 +81,7 @@ class BinaryManager {
                     else -> "linux"
                 }
                 val arch = when {
-                    SystemInfo.isAarch64 -> "arm64"
+                    CpuArch.isArm64() -> "arm64"
                     else -> "amd64"
                 }
 
@@ -99,9 +100,9 @@ class BinaryManager {
                 val tempExtractDir = FileUtil.createTempDirectory("gg-extract", null)
                 
                 if (isZip) {
-                    Decompressor.Zip(tempArchive).extract(tempExtractDir)
+                    Decompressor.Zip(tempArchive.toPath()).extract(tempExtractDir.toPath())
                 } else {
-                    Decompressor.Tar(tempArchive).extract(tempExtractDir)
+                    Decompressor.Tar(tempArchive.toPath()).extract(tempExtractDir.toPath())
                 }
                 
                 FileUtil.delete(tempArchive)

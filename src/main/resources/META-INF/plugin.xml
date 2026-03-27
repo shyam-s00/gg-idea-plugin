@@ -2,7 +2,7 @@
 <idea-plugin>
     <id>dev.gopherglide.gg-plugin</id>
 
-    <name>Gopher Glide Plugin</name>
+    <name>Gopher Glide</name>
 
     <vendor url="https://github.com/shyam/gopher-glide">Gopher Glide</vendor>
 
