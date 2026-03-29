@@ -4,15 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="fix: add more space clean up">
-      <change beforePath="$PROJECT_DIR$/.github/workflows/build.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="a782254b-80fb-41a1-a33f-8c5d2b8d74f3" name="Changes" comment="ci: update build settings">
       <change beforePath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.intellijPlatform/self-update.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/TerminalExecutor.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/execution/TerminalExecutor.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/settings/GopherGlideConfigurable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/kotlin/dev/gopherglide/ggplugin/settings/GopherGlideConfigurable.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/META-INF/plugin.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -258,7 +251,7 @@
       <workItem from="1774190478830" duration="31494000" />
       <workItem from="1774622692893" duration="1641000" />
       <workItem from="1774626400095" duration="10712000" />
-      <workItem from="1774799081859" duration="926000" />
+      <workItem from="1774799081859" duration="1878000" />
     </task>
     <task id="LOCAL-00001" summary="chore: add .gitignore">
       <option name="closed" value="true" />
@@ -340,7 +333,31 @@
       <option name="project" value="LOCAL" />
       <updated>1774644484221</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="chore: update gitignore">
+      <option name="closed" value="true" />
+      <created>1774800604328</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1774800604328</updated>
+    </task>
+    <task id="LOCAL-00012" summary="fix: update deprecated items">
+      <option name="closed" value="true" />
+      <created>1774800748057</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1774800748057</updated>
+    </task>
+    <task id="LOCAL-00013" summary="ci: update build settings">
+      <option name="closed" value="true" />
+      <created>1774800772200</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1774800772200</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -357,7 +374,10 @@
     <MESSAGE value="refactor: reorg project structure" />
     <MESSAGE value="fix: terminal name" />
     <MESSAGE value="fix: add more space clean up" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix: add more space clean up" />
+    <MESSAGE value="chore: update gitignore" />
+    <MESSAGE value="fix: update deprecated items" />
+    <MESSAGE value="ci: update build settings" />
+    <option name="LAST_COMMIT_MESSAGE" value="ci: update build settings" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
