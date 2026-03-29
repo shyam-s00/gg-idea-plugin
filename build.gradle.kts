@@ -17,7 +17,7 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
     intellijPlatform {
-        intellijIdea("2025.2.4")
+        intellijIdeaCommunity("2024.2.4")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
         bundledPlugin("com.intellij.modules.json")
@@ -29,17 +29,23 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "252.25557"
+            sinceBuild = "242"
         }
 
         changeNotes = """
             Initial version
         """.trimIndent()
     }
-    
+
     pluginVerification {
         ides {
             recommended()
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.GoLand, "2024.2")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.WebStorm, "2024.2")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.Rider, "2024.2")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.PyCharmCommunity, "2024.2")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.PhpStorm, "2024.2")
+            create(org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.RubyMine, "2024.2")
         }
     }
 }

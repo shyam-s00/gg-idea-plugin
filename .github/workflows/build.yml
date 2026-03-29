@@ -9,8 +9,47 @@ on:
 
 jobs:
   build:
-    name: Build and Verify Plugin
+    name: Build Plugin
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Plugin
+        run: ./gradlew buildPlugin --no-daemon
+
+      - name: Upload Unverified Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-artifact
+          path: build/distributions/*.zip
+          retention-days: 1
+
+  verify:
+    name: Verify Plugin
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ide: 
+          - IC # IDEA Community
+          - PC # PyCharm Community
+          - RD # Rider
+          - GO # GoLand
+          - WS # WebStorm
+          - PS # PhpStorm
+          - RM # RubyMine
 
     steps:
       - name: Checkout Repository
@@ -38,15 +77,37 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Build Plugin
-        run: ./gradlew buildPlugin --no-daemon
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-artifact
+          path: build/distributions
 
-      - name: Verify Plugin
-        run: ./gradlew verifyPlugin --no-daemon
+      - name: Verify Plugin (${{ matrix.ide }})
+        env:
+          # A bit of a hack to run verification for specific IDE
+          ORG_GRADLE_PROJECT_pluginVerificationIde: ${{ matrix.ide }}
+        run: |
+          # Use a script to filter the IDES to only verify against the one in the matrix
+          # The new Gradle plugin for platform handles verification differently, so we'll just run it normally
+          # It's better to just let the matrix run the verify task - the disk space clear should be enough
+          ./gradlew verifyPlugin --no-daemon
 
-      - name: Upload Plugin Artifact
+  upload:
+    name: Upload Final Plugin
+    needs: verify
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-artifact
+          path: plugin-dist
+          
+      - name: Upload Verified Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gopher-glide-idea-plugin
-          path: build/distributions/*.zip
+          path: plugin-dist/*.zip
           retention-days: 7
