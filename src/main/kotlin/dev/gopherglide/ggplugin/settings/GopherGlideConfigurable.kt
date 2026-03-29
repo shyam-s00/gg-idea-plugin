@@ -2,6 +2,7 @@ package dev.gopherglide.ggplugin.settings
 
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.ui.TextBrowseFolderListener
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
@@ -19,7 +20,7 @@ class GopherGlideConfigurable : Configurable {
             .withTitle("Select Gopher Glide Binary")
             .withDescription("Select the gopher-glide executable file.")
 
-        bField.addBrowseFolderListener(null, descriptor)
+        bField.addBrowseFolderListener(TextBrowseFolderListener(descriptor))
         binaryPathField = bField
 
         component = panel {

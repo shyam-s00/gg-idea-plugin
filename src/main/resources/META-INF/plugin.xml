@@ -11,6 +11,7 @@
         Provides syntax assistance, clickable file links, and instant execution straight into the IDE's built-in terminal.
     ]]></description>
 
+    <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
     <depends>org.jetbrains.plugins.terminal</depends>
