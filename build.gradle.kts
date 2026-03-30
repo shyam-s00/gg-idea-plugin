@@ -37,6 +37,11 @@ intellijPlatform {
         """.trimIndent()
     }
 
+    publishing {
+        token = System.getenv("PUBLISH_TOKEN")
+        channels = listOf(project.findProperty("pluginChannel")?.toString() ?: "default")
+    }
+
     pluginVerification {
         ides {
             val ideToVerify = project.findProperty("pluginVerificationIde") as? String

@@ -77,12 +77,24 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         
-      - name: Extract version
-        id: extract_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Extract version and channel
+        id: release_info
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Determine channel based on version string
+          # If version contains a hyphen (e.g. 1.0.0-beta, 1.0.0-rc1), use the part after hyphen as channel
+          # Otherwise, default to "default" (stable)
+          if [[ "$VERSION" == *-* ]]; then
+            CHANNEL=$(echo "$VERSION" | cut -d'-' -f2 | cut -d'.' -f1)
+            echo "CHANNEL=$CHANNEL" >> $GITHUB_OUTPUT
+          else
+            echo "CHANNEL=default" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build Plugin
-        run: ./gradlew buildPlugin -PpluginVersion=${{ steps.extract_version.outputs.VERSION }} --no-daemon
+        run: ./gradlew buildPlugin -PpluginVersion=${{ steps.release_info.outputs.VERSION }} --no-daemon
         
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -90,8 +102,7 @@ jobs:
         with:
           files: build/distributions/*.zip
 
-      # Optional: Here you could add a step to publish to the JetBrains Marketplace
-      # - name: Publish Plugin
-      #   env:
-      #     PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-      #   run: ./gradlew publishPlugin -PpluginVersion=${{ steps.extract_version.outputs.VERSION }}
+      - name: Publish Plugin to JetBrains Marketplace
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_TOKEN }}
+        run: ./gradlew publishPlugin -PpluginVersion=${{ steps.release_info.outputs.VERSION }} -PpluginChannel=${{ steps.release_info.outputs.CHANNEL }} --no-daemon
