@@ -10,7 +10,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide Test", "Execute or create load test for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
+class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide", "Execute or create load test for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
     
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT

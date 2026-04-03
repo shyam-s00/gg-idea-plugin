@@ -33,11 +33,11 @@
     </extensions>
 
     <actions>
-        <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run Load Test" description="Run Gopher-Glide load test" icon="AllIcons.Actions.Execute">
+        <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run GG" description="Run Gopher-Glide" icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
-        <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run Gopher-Glide Load Test" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute">
+        <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run Gopher-Glide" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
