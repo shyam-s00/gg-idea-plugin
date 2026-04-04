@@ -1,7 +1,7 @@
 # Gopher Glide JetBrains Plugin
 
 [![Build](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml/badge.svg)](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml)
-[![Version](https://img.shields.io/jetbrains/plugin/v/dev.gopherglide.gg-plugin.svg?label=Jetbrains%20Plugin%20(beta))](https://plugins.jetbrains.com/plugin/30983-gopher-glide/versions/beta/1001254)
+[![Version](https://img.shields.io/jetbrains/plugin/v/dev.gopherglide.gg-plugin.svg?label=Jetbrains%20Plugin%20)](https://plugins.jetbrains.com/plugin/30983-gopher-glide/versions/beta/1001254)
 
 
 
