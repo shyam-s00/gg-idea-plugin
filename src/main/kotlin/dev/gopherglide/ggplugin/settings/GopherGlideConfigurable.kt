@@ -20,6 +20,7 @@ import javax.swing.SwingUtilities
 class GopherGlideConfigurable : Configurable {
     private var component: JComponent? = null
     private var binaryPathField: TextFieldWithBrowseButton? = null
+    private var snapshotsDirField: TextFieldWithBrowseButton? = null
 
     override fun getDisplayName(): String = "Gopher Glide"
 
@@ -28,9 +29,15 @@ class GopherGlideConfigurable : Configurable {
         val descriptor = FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
             .withTitle("Select Gopher Glide Binary")
             .withDescription("Select the gopher-glide executable file.")
-
         bField.addBrowseFolderListener(TextBrowseFolderListener(descriptor))
         binaryPathField = bField
+
+        val sField = TextFieldWithBrowseButton()
+        val sDescriptor = FileChooserDescriptorFactory.createSingleFolderDescriptor()
+            .withTitle("Select Custom Snapshots Directory")
+            .withDescription("Select the directory where Gopher-Glide snapshots are stored.")
+        sField.addBrowseFolderListener(TextBrowseFolderListener(sDescriptor))
+        snapshotsDirField = sField
 
         var statusLabel: JLabel? = null
         var versionLabel: JLabel? = null
@@ -43,6 +50,13 @@ class GopherGlideConfigurable : Configurable {
             }
             row {
                 label("Leave empty to use system PATH or auto-download.")
+            }
+
+            row("Custom snapshots dir:") {
+                cell(sField).align(AlignX.FILL)
+            }
+            row {
+                label("Leave empty to use OS default (~/.config/gg/snapshots, etc).")
             }
 
             row {
@@ -202,21 +216,25 @@ class GopherGlideConfigurable : Configurable {
 
     override fun isModified(): Boolean {
         val settings = GopherGlideSettings.instance
-        return binaryPathField?.text != settings.customBinaryPath
+        return binaryPathField?.text != settings.customBinaryPath ||
+               snapshotsDirField?.text != settings.customSnapshotsDir
     }
 
     override fun apply() {
         val settings = GopherGlideSettings.instance
         settings.customBinaryPath = binaryPathField?.text ?: ""
+        settings.customSnapshotsDir = snapshotsDirField?.text ?: ""
     }
 
     override fun reset() {
         val settings = GopherGlideSettings.instance
         binaryPathField?.text = settings.customBinaryPath
+        snapshotsDirField?.text = settings.customSnapshotsDir
     }
 
     override fun disposeUIResources() {
         component = null
         binaryPathField = null
+        snapshotsDirField = null
     }
 }

@@ -38,9 +38,32 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val snapAction = object : AnAction("Run and Record Snapshot...", "Execute load test and record a snapshot", AllIcons.Actions.StartDebugger) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                val tag = com.intellij.openapi.ui.Messages.showInputDialog(
+                    project,
+                    "Enter Snapshot Tag (leave blank for default):",
+                    "Record Snapshot",
+                    com.intellij.openapi.ui.Messages.getQuestionIcon()
+                )
+                if (tag != null) {
+                    RunAndRecordSnapAction.executeTest(project, virtualFile, tag)
+                }
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action),
+            arrayOf(action, snapAction),
             { "Run Load Test" }
         )
     }
