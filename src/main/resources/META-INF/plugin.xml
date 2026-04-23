@@ -31,7 +31,7 @@
 
         <runLineMarkerContributor language="any" implementationClass="dev.gopherglide.ggplugin.execution.HttpGopherGlideRunLineMarkerContributor"/>
 
-        <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="AllIcons.Toolwindows.ToolWindowRun"
+        <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="/META-INF/pluginIcon.svg"
                     factoryClass="dev.gopherglide.ggplugin.snap.ui.SnapToolWindowFactory"/>
     </extensions>
 
@@ -40,23 +40,18 @@
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
 
-        <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run GG" description="Run Gopher-Glide" icon="AllIcons.Actions.Execute">
+        <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="/META-INF/pluginIcon.svg">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-        </action>
-        <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run and Record Snapshot..." description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.StartDebugger">
-            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-        </action>
-        <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run Gopher-Glide" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute">
-            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
-        </action>
-        <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run and Record Snapshot..." description="Execute load test and record a snapshot for this HTTP file" icon="AllIcons.Actions.StartDebugger">
-            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
-            <add-to-group group-id="EditorPopupMenu" anchor="after" relative-to-action="GopherGlide.RunHttp"/>
-            <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
-        </action>
+
+            <!-- YAML actions -->
+            <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run Gopher-Glide" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run &amp;&amp; Record" description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.Dump"/>
+
+            <!-- HTTP actions -->
+            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute load test and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
+        </group>
     </actions>
 </idea-plugin>

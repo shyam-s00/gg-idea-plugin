@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 
-class RunAndRecordSnapAction : AnAction("Run and Record Snapshot...", "Execute load test and record a snapshot", com.intellij.icons.AllIcons.Actions.Execute) {
+class RunAndRecordSnapAction : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot", com.intellij.icons.AllIcons.Actions.Execute) {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT

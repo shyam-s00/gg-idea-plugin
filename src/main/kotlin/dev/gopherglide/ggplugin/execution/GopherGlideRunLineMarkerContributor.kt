@@ -23,7 +23,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
 
         if (parentMapping.keyValues.firstOrNull() != element) return null
 
-        val action = object : AnAction("Run Load Test", "Execute the Gopher-Glide load test", AllIcons.Actions.Execute) {
+        val action = object : AnAction("Run GG", "Execute the Gopher-Glide", AllIcons.Actions.Execute) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
                 RunGopherGlideAction.executeTest(project, virtualFile)
@@ -38,7 +38,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
-        val snapAction = object : AnAction("Run and Record Snapshot...", "Execute load test and record a snapshot", AllIcons.Actions.StartDebugger) {
+        val snapAction = object : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot", AllIcons.Actions.Dump) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
                 val tag = com.intellij.openapi.ui.Messages.showInputDialog(
@@ -64,7 +64,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
             arrayOf(action, snapAction),
-            { "Run Load Test" }
+            { "Run GG" }
         )
     }
 }

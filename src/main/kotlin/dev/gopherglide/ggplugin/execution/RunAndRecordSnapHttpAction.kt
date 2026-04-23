@@ -11,7 +11,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 
-class RunAndRecordSnapHttpAction : AnAction("Run and Record Snapshot...", "Execute load test and record a snapshot for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
+class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execute load test and record a snapshot for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
