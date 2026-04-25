@@ -23,7 +23,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
 
         if (parentMapping.keyValues.firstOrNull() != element) return null
 
-        val action = object : AnAction("Run Load Test", "Execute the Gopher-Glide load test", AllIcons.Actions.Execute) {
+        val action = object : AnAction("Run GG", "Execute the Gopher-Glide", AllIcons.Actions.Execute) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
                 RunGopherGlideAction.executeTest(project, virtualFile)
@@ -38,10 +38,33 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val snapAction = object : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot", AllIcons.Actions.Dump) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                val tag = com.intellij.openapi.ui.Messages.showInputDialog(
+                    project,
+                    "Enter Snapshot Tag (leave blank for default):",
+                    "Record Snapshot",
+                    com.intellij.openapi.ui.Messages.getQuestionIcon()
+                )
+                if (tag != null) {
+                    RunAndRecordSnapAction.executeTest(project, virtualFile, tag)
+                }
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action),
-            { "Run Load Test" }
+            arrayOf(action, snapAction),
+            { "Run GG" }
         )
     }
 }

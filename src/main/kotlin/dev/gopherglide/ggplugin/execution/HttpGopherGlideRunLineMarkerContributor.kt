@@ -41,9 +41,24 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val snapAction = object : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot for this HTTP file", AllIcons.Actions.Dump) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                RunAndRecordSnapHttpAction.executeTest(project, virtualFile)
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action),
+            arrayOf(action, snapAction),
             { "Run Gopher-Glide " }
         )
     }
