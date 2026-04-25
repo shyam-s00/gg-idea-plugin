@@ -31,16 +31,17 @@
 
         <runLineMarkerContributor language="any" implementationClass="dev.gopherglide.ggplugin.execution.HttpGopherGlideRunLineMarkerContributor"/>
 
-        <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="/META-INF/pluginIcon.svg"
+        <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="/icons/ggToolIcon.svg"
                     factoryClass="dev.gopherglide.ggplugin.snap.ui.SnapToolWindowFactory"/>
     </extensions>
 
     <actions>
+
         <action id="GopherGlide.RefreshSnaps" class="dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction" text="Refresh Snaps" icon="AllIcons.Actions.Refresh"/>
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
 
-        <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="/META-INF/pluginIcon.svg">
+        <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>

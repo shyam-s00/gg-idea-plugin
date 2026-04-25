@@ -8,6 +8,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.table.JBTable
+import dev.gopherglide.ggplugin.GopherGlideIcons
 import dev.gopherglide.ggplugin.execution.TerminalExecutor
 import dev.gopherglide.ggplugin.snap.SnapDataManager
 import dev.gopherglide.ggplugin.snap.SnapModel
@@ -22,6 +23,9 @@ import javax.swing.JPanel
 class SnapToolWindowFactory : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        // Explicitly set the icon via IconLoader so the IDE's color patcher can track it
+        toolWindow.setIcon(GopherGlideIcons.SidebarIcon)
+
         val panel = JPanel(BorderLayout())
         val tableModel = SnapTableModel()
         val table = JBTable(tableModel)
