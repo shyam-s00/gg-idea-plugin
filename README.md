@@ -3,7 +3,7 @@
 [![Build](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml/badge.svg)](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml)
 [![Version](https://img.shields.io/jetbrains/plugin/v/dev.gopherglide.gg-plugin.svg?label=Jetbrains%20Plugin%20)](https://plugins.jetbrains.com/plugin/30983-gopher-glide/versions/beta/1001254)
 
-Gopher Glide brings fast execution and navigation for [Gopher-Glide (`gg`)](https://github.com/shyam-s00/gopher-glide) directly into JetBrains IDEs.
+Gopher Glide brings fast execution and navigation for [Gopher-Glide (`gg`)](https://gopherglide.dev/) directly into JetBrains IDEs.
 
 Run load tests, record performance snapshots, compare results over time, and navigate config files — all without leaving your editor.
 

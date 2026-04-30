@@ -4,11 +4,11 @@
 
     <name>Gopher Glide</name>
 
-    <vendor url="https://github.com/shyam/gopher-glide">Gopher Glide</vendor>
+    <vendor url="https://gopherglide.dev/">Gopher Glide</vendor>
 
     <description><![CDATA[
-        A smart, context-aware execution and navigation layer for the Gopher-Glide (gg) load testing CLI.<br>
-        Provides syntax assistance, clickable file links, and instant execution straight into the IDE's built-in terminal.
+        Gopher Glide (gg) is a modern, zero-scripting API load testing and performance benchmarking CLI built in Go. Designed as a lightweight alternative to tools like k6, Gatling, or Locust, gg runs standard .http files right out of the box.<br><br>
+        Generate high-concurrency traffic with a dynamic terminal UI, adjust RPS in real-time, and catch API regressions using built-in semantic JSON snapshotting. No agents, no servers, no boilerplate code.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
