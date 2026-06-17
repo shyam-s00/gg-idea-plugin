@@ -41,3 +41,6 @@ bin/
 
 ### Plugin Framework ###
 .intellijPlatform/
+
+### other non-important stuff
+ignore/**
