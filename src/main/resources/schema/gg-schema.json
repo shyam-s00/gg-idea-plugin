@@ -25,6 +25,25 @@
         "time_scale": {
           "type": "number",
           "description": "Time multiplier (1.0 = real-time, 2.0 = 2x speed)"
+        },
+        "snap": {
+          "type": "object",
+          "description": "Snapshot recording configuration",
+          "properties": {
+            "sample_rate": {
+              "type": "number",
+              "description": "Fraction of requests to sample for body inference (e.g., 0.05 for 5%)"
+            },
+            "max_samples": {
+              "type": "integer",
+              "description": "Maximum number of body samples to retain per endpoint"
+            },
+            "max_body_kb": {
+              "type": "integer",
+              "description": "Maximum body size in KB to sample per request"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["httpFile"],
@@ -36,6 +55,10 @@
       "items": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional human-readable name for the stage (e.g., 'Ramp-up', 'Sustain')"
+          },
           "duration": {
             "type": "string",
             "description": "Stage duration (e.g., '10s', '0s' for instant spike)"
