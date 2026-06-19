@@ -2,15 +2,13 @@ package dev.gopherglide.ggplugin.execution
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.terminal.ui.TerminalWidget
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.services.BinaryManager
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 
-import java.lang.ref.WeakReference
-import com.intellij.openapi.util.Disposer
-
 object TerminalExecutor {
-    private val activeWidgetRefs: MutableMap<Project, WeakReference<Any>> = mutableMapOf()
+    private val activeWidgets: MutableMap<Project, TerminalWidget> = mutableMapOf()
 
     fun execute(project: Project, vararg args: String) {
         val binaryManager = BinaryManager.instance
@@ -46,52 +44,36 @@ object TerminalExecutor {
                     val terminalManager = TerminalToolWindowManager.getInstance(project)
                     val workingDir = project.basePath ?: System.getProperty("user.home")
                     
-                    var widget: Any? = activeWidgetRefs[project]?.get()
-                    if (widget != null) {
-                        var isDisposed = false
-                        if (widget is com.intellij.openapi.Disposable) {
-                            isDisposed = Disposer.isDisposed(widget)
-                        } else {
-                            try {
-                                val m = widget.javaClass.getMethod("isDisposed")
-                                isDisposed = m.invoke(widget) as Boolean
-                            } catch (e: Exception) {}
-                        }
-                        if (isDisposed) {
-                            widget = null
-                        }
-                    }
+                    // A live entry in the map is, by construction, a non-terminated widget: its
+                    // addTerminationCallback below removes the entry the moment its session ends.
+                    var widget: TerminalWidget? = activeWidgets[project]
 
                     if (widget != null) {
                         try {
                             // Send SIGINT (Ctrl+C) to gracefully kill any previously running TUI
-                            val sendMethod = widget.javaClass.getMethod("sendCommandToExecute", String::class.java)
-                            sendMethod.isAccessible = true
-                            sendMethod.invoke(widget, "\u0003")
+                            widget.sendCommandToExecute("\u0003")
                         } catch (e: Exception) {
                             widget = null
                         }
                     }
 
                     if (widget == null) {
-                        widget = terminalManager.createShellWidget(workingDir, "Gopher-Glide", true, false)
-                        activeWidgetRefs[project] = WeakReference(widget)
-                        Disposer.register(project) { activeWidgetRefs.remove(project) }
+                        val newWidget = terminalManager.createShellWidget(workingDir, "Gopher-Glide", true, false)
+                        activeWidgets[project] = newWidget
+                        newWidget.addTerminationCallback({ activeWidgets.remove(project) }, project)
+                        widget = newWidget
                     }
 
                     val commandArgs = args.joinToString(" ") { if (it.contains(" ")) "\"$it\"" else it }
                     val command = "\"$binaryPath\" $commandArgs"
-                    
+                    val widgetToRunIn = widget
+
                     // Add a small delay to ensure the widget is ready/cleared before sending the new command
                     ApplicationManager.getApplication().executeOnPooledThread {
                         Thread.sleep(300)
                         ApplicationManager.getApplication().invokeLater {
                             try {
-                                if (widget != null) {
-                                    val sendMethod = widget.javaClass.getMethod("sendCommandToExecute", String::class.java)
-                                    sendMethod.isAccessible = true
-                                    sendMethod.invoke(widget, command)
-                                }
+                                widgetToRunIn.sendCommandToExecute(command)
                             } catch (e: Exception) {
                                 com.intellij.openapi.ui.Messages.showErrorDialog(project, "Failed to send command to terminal: ${e.message}", "Terminal Error")
                             }
