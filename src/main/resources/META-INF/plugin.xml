@@ -66,8 +66,9 @@
             <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run &amp;&amp; Record" description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.Dump"/>
 
             <!-- HTTP actions -->
-            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Execute or create a traffic simulation for this HTTP file" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Run a zero-config profile, or this file's .gg.yaml config if one exists" icon="AllIcons.Actions.Execute"/>
             <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute a traffic simulation and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
+            <action id="GopherGlide.RunWithProfileHttp" class="dev.gopherglide.ggplugin.execution.RunWithProfileHttpAction" text="Run with Profile..." description="Pick one of gg's built-in load profiles and run it against this HTTP file" icon="AllIcons.Actions.ListFiles"/>
         </group>
     </actions>
 </idea-plugin>

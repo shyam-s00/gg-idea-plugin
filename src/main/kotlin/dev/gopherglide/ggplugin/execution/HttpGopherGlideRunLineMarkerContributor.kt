@@ -56,6 +56,25 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val profileAction = object : AnAction(
+            "Run with Profile...",
+            "Pick one of gg's built-in load profiles and run it against this HTTP file",
+            AllIcons.Actions.ListFiles
+        ) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                RunWithProfileHttpAction.showProfilePicker(project, virtualFile, e.dataContext)
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         val interactiveAction = object : AnAction(
             "Run in Terminal (Interactive)",
             "Run with gg's interactive TUI in a terminal — enables live ↑/↓ RPS-bias control, costs more CPU than the default panel",
@@ -75,9 +94,28 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val generateConfigAction = object : AnAction(
+            "Generate config.yaml...",
+            "Scaffold a .gg.yaml config for this HTTP file without running anything",
+            AllIcons.FileTypes.Yaml
+        ) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                RunGopherGlideHttpAction.generateConfigYaml(project, virtualFile)
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action, snapAction, interactiveAction),
+            arrayOf(action, snapAction, profileAction, interactiveAction, generateConfigAction),
             { "Run Gopher-Glide " }
         )
     }
