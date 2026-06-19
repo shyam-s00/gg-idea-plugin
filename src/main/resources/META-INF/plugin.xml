@@ -7,8 +7,19 @@
     <vendor url="https://gopherglide.dev/">Gopher Glide</vendor>
 
     <description><![CDATA[
-        Gopher Glide (gg) is a modern, zero-scripting API traffic simulation and performance benchmarking CLI built in Go. Designed as a lightweight alternative to tools like k6, Gatling, or Locust, gg runs standard .http files right out of the box.<br><br>
-        Generate high-concurrency traffic with a dynamic terminal UI, adjust RPS in real-time, and catch API regressions using built-in semantic JSON snapshotting. No agents, no servers, no boilerplate code.
+        Gopher Glide (gg) is a modern, zero-scripting API traffic simulation and performance benchmarking CLI built in Go — a lightweight alternative to tools like k6, Gatling, or Locust that runs straight from standard .http files. No agents, no servers to stand up, no boilerplate code.<br><br>
+
+        This plugin brings gg's traffic-simulation workflow directly into the IDE:
+        <ul>
+        <li><b>One-click runs</b> — execute a traffic simulation, or scaffold a new run config, straight from any <code>.http</code> file or <code>.gg.yaml</code> config via gutter icons or the right-click menu.</li>
+        <li><b>Native run panel</b> — a dedicated "Gopher Glide" tool window shows live stage progress, RPS, error rate, and latency percentiles while a simulation runs.</li>
+        <li><b>Interactive TUI on demand</b> — opt into gg's full terminal UI, including live &uarr;/&darr; RPS-bias control, any time you want hands-on control instead of the panel.</li>
+        <li><b>Snapshot comparison</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas) to spot API regressions, right from the same tool window.</li>
+        <li><b>Schema-validated config</b> — JSON Schema completion and validation for <code>.gg.yaml</code> files, covering stages, snapshot tuning, and built-in profiles.</li>
+        <li><b>Zero manual setup</b> — the plugin downloads and manages the gg binary for you, with update checks and diagnostics built into Settings &rarr; Gopher Glide.</li>
+        </ul>
+
+        Learn more and read the full docs at <a href="https://gopherglide.dev">gopherglide.dev</a>.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

@@ -33,7 +33,16 @@ intellijPlatform {
         }
 
         changeNotes = """
-            Initial version
+            <b>Stability fix for the new gg interactive TUI</b><br>
+            A recent gg update increased the interactive TUI's redraw rate, which could pin a CPU core and freeze or crash the IDE when running a simulation from the plugin. This release fixes that:
+            <ul>
+            <li>Runs now default to a new, lightweight native <b>"Gopher Glide" run panel</b> showing live stage progress, RPS, error rate, and latency — instead of rendering gg's full terminal UI inside the IDE.</li>
+            <li>The full interactive TUI, including live &uarr;/&darr; RPS-bias control, is still available as an explicit "Run in Terminal (Interactive)" option for anyone who wants it.</li>
+            <li>Snaps and the new Run panel are now combined into one "Gopher Glide" tool window with tabs, instead of two separate sidebar icons.</li>
+            <li>Improved first-run experience: the plugin now proactively detects a missing gg binary and offers to install it, with visible download progress, instead of silently hanging on your first Run click.</li>
+            <li>Terminology aligned with gg's "traffic simulation" branding throughout the plugin.</li>
+            </ul>
+            <b>Coming next:</b> a one-click built-in profile picker for zero-config runs, native IntelliJ Run Configuration support, and request-chaining navigation/completion for <code>@gg-export</code> variables.
         """.trimIndent()
     }
 
