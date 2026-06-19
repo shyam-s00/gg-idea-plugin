@@ -3,6 +3,7 @@ package dev.gopherglide.ggplugin.execution
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
+import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.services.BinaryManager
 
 /**
@@ -16,7 +17,7 @@ object GopherGlideExecutor {
         val binaryPath = binaryManager.resolveBinaryPath()
 
         if (binaryPath == null) {
-            binaryManager.downloadLatestRelease().thenAccept { downloadedPath ->
+            GopherGlideNotifications.downloadWithProgress(project).thenAccept { downloadedPath ->
                 GopherGlideHeadlessRunner.run(project, downloadedPath, args.toList())
             }.exceptionally { ex ->
                 ApplicationManager.getApplication().invokeLater {

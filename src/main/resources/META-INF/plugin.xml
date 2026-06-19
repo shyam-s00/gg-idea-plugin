@@ -33,6 +33,10 @@
 
         <toolWindow id="Gopher Glide" anchor="bottom" icon="/icons/ggToolIcon.svg"
                     factoryClass="dev.gopherglide.ggplugin.ui.GopherGlideToolWindowFactory"/>
+
+        <notificationGroup id="Gopher Glide" displayType="BALLOON"/>
+
+        <postStartupActivity implementation="dev.gopherglide.ggplugin.startup.GopherGlideStartupActivity"/>
     </extensions>
 
     <actions>
