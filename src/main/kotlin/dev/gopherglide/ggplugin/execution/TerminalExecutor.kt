@@ -9,7 +9,7 @@ import java.lang.ref.WeakReference
 import com.intellij.openapi.util.Disposer
 
 object TerminalExecutor {
-    private var activeWidgetRef: WeakReference<Any>? = null
+    private val activeWidgetRefs: MutableMap<Project, WeakReference<Any>> = mutableMapOf()
 
     fun execute(project: Project, vararg args: String) {
         val binaryManager = BinaryManager.instance
@@ -45,7 +45,7 @@ object TerminalExecutor {
                     val terminalManager = TerminalToolWindowManager.getInstance(project)
                     val workingDir = project.basePath ?: System.getProperty("user.home")
                     
-                    var widget: Any? = activeWidgetRef?.get()
+                    var widget: Any? = activeWidgetRefs[project]?.get()
                     if (widget != null) {
                         var isDisposed = false
                         if (widget is com.intellij.openapi.Disposable) {
@@ -74,7 +74,8 @@ object TerminalExecutor {
 
                     if (widget == null) {
                         widget = terminalManager.createShellWidget(workingDir, "Gopher-Glide", true, false)
-                        activeWidgetRef = WeakReference(widget)
+                        activeWidgetRefs[project] = WeakReference(widget)
+                        Disposer.register(project) { activeWidgetRefs.remove(project) }
                     }
 
                     val commandArgs = args.joinToString(" ") { if (it.contains(" ")) "\"$it\"" else it }

@@ -10,7 +10,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide", "Execute or create load test for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
+class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide", "Execute or create a traffic simulation for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
     
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
@@ -28,16 +28,20 @@ class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide", "Execute or create
     }
 
     companion object {
-        fun executeTest(project: Project, httpFile: VirtualFile) {
+        fun executeTest(project: Project, httpFile: VirtualFile, runInTerminal: Boolean = false) {
             val parentDir = httpFile.parent ?: return
             val existingYaml = parentDir.children.firstOrNull { it.name.endsWith(".gg.yaml") }
 
             if (existingYaml != null) {
-                TerminalExecutor.execute(project, existingYaml.path)
+                if (runInTerminal) {
+                    TerminalExecutor.execute(project, existingYaml.path)
+                } else {
+                    GopherGlideExecutor.execute(project, existingYaml.path)
+                }
             } else {
                 WriteCommandAction.runWriteCommandAction(project) {
                     try {
-                        val newYaml = parentDir.createChildData(this, "load-test.gg.yaml")
+                        val newYaml = parentDir.createChildData(this, "traffic-sim.gg.yaml")
                         val content = """
                             config:
                               httpFile: "${httpFile.name}"
@@ -68,5 +72,12 @@ class RunGopherGlideHttpAction : AnAction("Run Gopher-Glide", "Execute or create
                 }
             }
         }
+
+        /**
+         * Explicit opt-in to the interactive TUI in a terminal.
+         * TODO: pass a capped-fps flag to gg here once it exists, so this path no longer risks the CPU/crash regression.
+         */
+        fun executeTestInteractive(project: Project, httpFile: VirtualFile) =
+            executeTest(project, httpFile, runInTerminal = true)
     }
 }

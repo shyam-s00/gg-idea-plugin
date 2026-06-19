@@ -7,7 +7,7 @@
     <vendor url="https://gopherglide.dev/">Gopher Glide</vendor>
 
     <description><![CDATA[
-        Gopher Glide (gg) is a modern, zero-scripting API load testing and performance benchmarking CLI built in Go. Designed as a lightweight alternative to tools like k6, Gatling, or Locust, gg runs standard .http files right out of the box.<br><br>
+        Gopher Glide (gg) is a modern, zero-scripting API traffic simulation and performance benchmarking CLI built in Go. Designed as a lightweight alternative to tools like k6, Gatling, or Locust, gg runs standard .http files right out of the box.<br><br>
         Generate high-concurrency traffic with a dynamic terminal UI, adjust RPS in real-time, and catch API regressions using built-in semantic JSON snapshotting. No agents, no servers, no boilerplate code.
     ]]></description>
 
@@ -33,6 +33,9 @@
 
         <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="/icons/ggToolIcon.svg"
                     factoryClass="dev.gopherglide.ggplugin.snap.ui.SnapToolWindowFactory"/>
+
+        <toolWindow id="Gopher Glide Run" anchor="bottom" icon="/icons/ggToolIcon.svg"
+                    factoryClass="dev.gopherglide.ggplugin.execution.ui.GopherGlideRunToolWindowFactory"/>
     </extensions>
 
     <actions>
@@ -51,8 +54,8 @@
             <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run &amp;&amp; Record" description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.Dump"/>
 
             <!-- HTTP actions -->
-            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Execute or create load test for this HTTP file" icon="AllIcons.Actions.Execute"/>
-            <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute load test and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
+            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Execute or create a traffic simulation for this HTTP file" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute a traffic simulation and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
         </group>
     </actions>
 </idea-plugin>
