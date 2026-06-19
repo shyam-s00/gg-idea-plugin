@@ -3,37 +3,56 @@
 [![Build](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml/badge.svg)](https://github.com/shyam-s00/gg-idea-plugin/actions/workflows/build.yml)
 [![Version](https://img.shields.io/jetbrains/plugin/v/dev.gopherglide.gg-plugin.svg?label=Jetbrains%20Plugin%20)](https://plugins.jetbrains.com/plugin/30983-gopher-glide/versions/beta/1001254)
 
-Gopher Glide brings fast execution and navigation for [Gopher-Glide (`gg`)](https://gopherglide.dev/) directly into JetBrains IDEs.
+Gopher Glide brings fast execution and navigation for [Gopher-Glide (`gg`)](https://gopherglide.dev/) — a zero-scripting API traffic simulation and performance benchmarking CLI — directly into JetBrains IDEs.
 
-Run load tests, record performance snapshots, compare results over time, and navigate config files — all without leaving your editor.
+Run traffic simulations, record performance snapshots, compare results over time, and navigate config files — all without leaving your editor.
 
 ---
 
 ## Features
 
-### ▶ Run load tests from the editor
+### ▶ Run traffic simulations from the editor
 
-- **Gutter run icons** appear on `.gg.yaml` and `.http` files — click once to execute the test in the integrated terminal.
-- **Context menu actions** are available in the Project View, Editor, and Editor Tab right-click menus under **Gopher Glide (GG)**.
+- **Gutter run icons** appear on `.gg.yaml` and `.http` files:
+  - **Run** — executes the simulation in the native Gopher Glide run panel (see below).
+  - **Run && Record** — same, plus records a performance snapshot.
+  - **Run in Terminal (Interactive)** — runs gg's full interactive terminal UI instead, with live ↑ / ↓ RPS-bias control.
+- **Context menu actions** (Run / Run && Record) are available in the Project View, Editor, and Editor Tab right-click menus under **Gopher Glide (GG)**.
+- Running a `.http` file with no sibling `.gg.yaml` scaffolds a starter `traffic-sim.gg.yaml` and opens it for editing.
+
+### 🖥 Native run panel
+
+Runs default to a lightweight **Run** tab in the Gopher Glide tool window instead of rendering gg's interactive terminal UI inside the IDE — avoiding the CPU overhead of a full TUI redraw loop. While a simulation runs, it shows live:
+
+- Current stage, elapsed time, and overall status
+- Target vs. actual RPS, error rate, total requests
+- p50 / p95 / p99 latency
+- A sparkline of recent RPS history
+- A **Stop** button to cancel the run cleanly
+
+Prefer gg's full interactive TUI — for example, for live arrow-key RPS control? Use **Run in Terminal (Interactive)** instead; it's always one click away.
 
 ### 📸 Snapshot recording
 
-- **Run && Record** executes a load test and records a performance snapshot in one step.
+- **Run && Record** executes a traffic simulation and records a performance snapshot in one step.
 - Prompts for an optional tag so snapshots are easy to identify later.
 - Available for both `.gg.yaml` and `.http` files via gutter icons and the context menu.
 
-### 🗂 Snaps Tool Window
+### 🗂 Gopher Glide tool window
 
-A dedicated **Gopher Glide Snaps** panel (bottom toolbar) lists all recorded snapshots with key metrics:
+A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
+
+- **Run** — the native run panel described above.
+- **Snaps** — lists all recorded snapshots:
 
 | Column | Description |
 |---|---|
-| Tag | User-supplied label for the snapshot |
-| Start Time | When the test run began |
+| ID / Tag | Numeric ID plus the user-supplied tag (or "(untagged)") |
+| Date | When the test run began |
 | Total Requests | Aggregate request count |
 | Peak RPS | Peak requests-per-second recorded |
 
-Toolbar actions inside the panel:
+Toolbar actions inside the Snaps tab:
 
 - **Refresh** — reload the snapshot list from disk.
 - **View Detail** — stream the full snapshot report in the terminal (select one row).
@@ -46,14 +65,16 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 
 ### ✅ JSON schema validation
 
-`.gg.yaml` files are validated against the bundled Gopher-Glide JSON schema, giving inline errors and auto-complete for all config keys.
+`.gg.yaml` files are validated against the bundled Gopher-Glide JSON schema — including `stages[].name` and the optional `snap:` block — giving inline errors and auto-complete for all config keys.
 
-### ⚙️ Settings
+### ⚙️ Settings & first-run onboarding
 
 **Settings / Preferences → Tools → Gopher Glide**
 
-- Set a **custom `gg` binary path** if the executable is not on your `PATH`.
-- If no path is configured and `gg` is not found, the plugin **automatically downloads** the latest release from the [Gopher-Glide repository](https://github.com/shyam-s00/gopher-glide) into a plugin-managed directory.
+- Set a **custom `gg` binary path**, or a **custom snapshots directory**.
+- If no path is configured and `gg` isn't found, the plugin **automatically downloads** the latest release from the [Gopher-Glide repository](https://github.com/shyam-s00/gopher-glide) into a plugin-managed directory — with visible download progress, and a notification offering to install it the moment you open a project, instead of silently hanging on your first Run click.
+- **Check for Updates** (shown as **Install Gopher Glide** when nothing's installed yet) reports your local vs. latest version and updates with one click.
+- **Copy Diagnostics to Clipboard** collects OS, binary paths/permissions, and version info — useful for bug reports.
 
 ---
 
@@ -101,22 +122,23 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON`, `
 
 ## Usage
 
-### Run a load test
+### Run a traffic simulation
 
 1. Open a `.gg.yaml` or `.http` file.
 2. Click the **run gutter icon**, or right-click → **Gopher Glide (GG) → Run**.
-3. `gg` runs in the integrated terminal.
+3. The simulation runs in the **Gopher Glide → Run** tool window panel, with live metrics.
+4. Want gg's full interactive TUI instead? Use the gutter's **Run in Terminal (Interactive)** action.
 
 ### Run and record a snapshot
 
 1. Open a `.gg.yaml` or `.http` file.
 2. Click the **record gutter icon**, or right-click → **Gopher Glide (GG) → Run && Record**.
 3. Enter an optional tag when prompted.
-4. The test runs and a snapshot is saved automatically.
+4. The simulation runs and a snapshot is saved automatically.
 
 ### View and compare snapshots
 
-1. Open the **Gopher Glide Snaps** panel at the bottom of the IDE.
+1. Open the **Gopher Glide** tool window at the bottom of the IDE and switch to the **Snaps** tab.
 2. Click **Refresh** to load all recorded snapshots.
 3. Select a row and click **View Detail** (or double-click) to inspect results.
 4. Select two rows and click **Compare** to diff them in the terminal.
@@ -124,7 +146,7 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON`, `
 ### Configure the `gg` executable
 
 1. Open **Settings / Preferences → Tools → Gopher Glide**.
-2. Set a custom path to your `gg` binary (optional).
+2. Set a custom path to your `gg` binary, or a custom snapshots directory (optional).
 
 ---
 
