@@ -31,11 +31,8 @@
 
         <runLineMarkerContributor language="any" implementationClass="dev.gopherglide.ggplugin.execution.HttpGopherGlideRunLineMarkerContributor"/>
 
-        <toolWindow id="Gopher Glide Snaps" anchor="bottom" icon="/icons/ggToolIcon.svg"
-                    factoryClass="dev.gopherglide.ggplugin.snap.ui.SnapToolWindowFactory"/>
-
-        <toolWindow id="Gopher Glide Run" anchor="bottom" icon="/icons/ggToolIcon.svg"
-                    factoryClass="dev.gopherglide.ggplugin.execution.ui.GopherGlideRunToolWindowFactory"/>
+        <toolWindow id="Gopher Glide" anchor="bottom" icon="/icons/ggToolIcon.svg"
+                    factoryClass="dev.gopherglide.ggplugin.ui.GopherGlideToolWindowFactory"/>
     </extensions>
 
     <actions>

@@ -1,32 +1,26 @@
 package dev.gopherglide.ggplugin.execution.ui
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.ui.content.ContentFactory
-import dev.gopherglide.ggplugin.GopherGlideIcons
+import dev.gopherglide.ggplugin.ui.GopherGlideToolWindowFactory
 
-class GopherGlideRunToolWindowFactory : ToolWindowFactory {
+object GopherGlideRunToolWindowFactory {
+    private val panels = mutableMapOf<Project, GopherGlideRunPanel>()
 
-    override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        toolWindow.setIcon(GopherGlideIcons.SidebarIcon)
-
+    fun buildPanel(project: Project): GopherGlideRunPanel {
         val panel = GopherGlideRunPanel()
         panels[project] = panel
-
-        val content = ContentFactory.getInstance().createContent(panel, "", false)
-        toolWindow.contentManager.addContent(content)
+        return panel
     }
 
-    companion object {
-        private const val ID = "Gopher Glide Run"
-        private val panels = mutableMapOf<Project, GopherGlideRunPanel>()
-
-        /** Shows the tool window and returns its panel, or null if content hasn't been created yet. */
-        fun showAndGetPanel(project: Project): GopherGlideRunPanel? {
-            ToolWindowManager.getInstance(project).getToolWindow(ID)?.show()
-            return panels[project]
+    /** Shows the tool window, selects the Run tab, and returns the panel — or null if content hasn't been created yet. */
+    fun showAndGetPanel(project: Project): GopherGlideRunPanel? {
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(GopherGlideToolWindowFactory.TOOL_WINDOW_ID)
+        toolWindow?.show()
+        val panel = panels[project] ?: return null
+        toolWindow?.contentManager?.contents?.firstOrNull { it.component == panel }?.let {
+            toolWindow.contentManager.setSelectedContent(it)
         }
+        return panel
     }
 }
