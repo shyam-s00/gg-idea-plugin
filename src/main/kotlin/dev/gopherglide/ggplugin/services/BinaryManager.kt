@@ -21,6 +21,8 @@ import java.util.regex.Pattern
 /** Separator used inside the `getLocalVersion` result to keep fields distinct. */
 private const val SEP = "\u0001"
 
+private const val REMOTE_VERSION_CACHE_TTL_MS = 15 * 60 * 1000L
+
 @Service(Service.Level.APP)
 class BinaryManager {
     private val log = Logger.getInstance(BinaryManager::class.java)
@@ -113,8 +115,21 @@ class BinaryManager {
         return future
     }
 
-    fun getLatestRemoteVersion(): CompletableFuture<String?> {
+    @Volatile private var cachedRemoteVersion: String? = null
+    @Volatile private var cachedRemoteVersionAt: Long = 0L
+    @Volatile private var lastRemoteVersionError: String? = null
+
+    /** Human-readable reason the last [getLatestRemoteVersion] call returned null, or null if it succeeded (or hasn't run yet). */
+    fun getLastRemoteVersionError(): String? = lastRemoteVersionError
+
+    fun getLatestRemoteVersion(forceRefresh: Boolean = false): CompletableFuture<String?> {
         val future = CompletableFuture<String?>()
+
+        if (!forceRefresh && cachedRemoteVersion != null && System.currentTimeMillis() - cachedRemoteVersionAt < REMOTE_VERSION_CACHE_TTL_MS) {
+            future.complete(cachedRemoteVersion)
+            return future
+        }
+
         ApplicationManager.getApplication().executeOnPooledThread {
             try {
                 // Add timestamp to bypass any API caching
@@ -125,12 +140,27 @@ class BinaryManager {
 
                 val tagMatcher = Pattern.compile("\"tag_name\"\\s*:\\s*\"([^\"]+)\"").matcher(json)
                 if (tagMatcher.find()) {
-                    future.complete(tagMatcher.group(1))
+                    val tag = tagMatcher.group(1)
+                    lastRemoteVersionError = null
+                    cachedRemoteVersion = tag
+                    cachedRemoteVersionAt = System.currentTimeMillis()
+                    future.complete(tag)
                 } else {
+                    lastRemoteVersionError = null
                     future.complete(null)
                 }
+            } catch (e: HttpRequests.HttpStatusException) {
+                if (e.statusCode == 403) {
+                    log.warn("GitHub API rate limit reached", e)
+                    lastRemoteVersionError = "GitHub API rate limit reached, try again later."
+                } else {
+                    log.warn("Failed to fetch remote version: HTTP ${e.statusCode}", e)
+                    lastRemoteVersionError = null
+                }
+                future.complete(null)
             } catch (e: Exception) {
                 log.warn("Failed to fetch remote version", e)
+                lastRemoteVersionError = null
                 future.complete(null)
             }
         }
@@ -340,6 +370,12 @@ class BinaryManager {
                     }
                 }
                 if (pathHits == 0) sb.appendLine("  (none found on PATH)")
+
+                if (SystemInfo.isWindows) {
+                    sb.appendLine()
+                    sb.appendLine("[Windows note]")
+                    sb.appendLine("  If SmartScreen blocks the binary, right-click it in File Explorer → Properties → check \"Unblock\" → OK.")
+                }
 
                 future.complete(sb.toString())
             } catch (e: Exception) {

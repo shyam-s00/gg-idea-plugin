@@ -39,14 +39,18 @@ class RunAndRecordSnapAction : AnAction("Run && Record Snapshot...", "Execute GG
     companion object {
         private val log = Logger.getInstance(RunAndRecordSnapAction::class.java)
 
-        fun executeTest(project: Project, file: VirtualFile, tag: String) {
+        fun executeTest(project: Project, file: VirtualFile, tag: String, runInTerminal: Boolean = false) {
             log.info("Starting Gopher-Glide snap run for: ${file.path}")
             val args = mutableListOf(file.path, "--snap")
             if (tag.isNotBlank()) {
                 args.add("--snap-tag")
                 args.add(tag.trim())
             }
-            TerminalExecutor.execute(project, *args.toTypedArray())
+            if (runInTerminal) {
+                TerminalExecutor.execute(project, *args.toTypedArray())
+            } else {
+                GopherGlideExecutor.execute(project, *args.toTypedArray())
+            }
         }
     }
 }

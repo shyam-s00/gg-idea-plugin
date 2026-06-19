@@ -11,7 +11,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VirtualFile
 
-class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execute load test and record a snapshot for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
+class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execute a traffic simulation and record a snapshot for this HTTP file", com.intellij.icons.AllIcons.Actions.Execute) {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
         return ActionUpdateThread.BGT
@@ -29,7 +29,7 @@ class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execut
     }
 
     companion object {
-        fun executeTest(project: Project, httpFile: VirtualFile) {
+        fun executeTest(project: Project, httpFile: VirtualFile, runInTerminal: Boolean = false) {
             val parentDir = httpFile.parent ?: return
             val existingYaml = parentDir.children.firstOrNull { it.name.endsWith(".gg.yaml") }
 
@@ -47,13 +47,17 @@ class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execut
                         args.add("--snap-tag")
                         args.add(tag.trim())
                     }
-                    TerminalExecutor.execute(project, *args.toTypedArray())
+                    if (runInTerminal) {
+                        TerminalExecutor.execute(project, *args.toTypedArray())
+                    } else {
+                        GopherGlideExecutor.execute(project, *args.toTypedArray())
+                    }
                 }
             } else {
                 // Generate boilerplate
                 WriteCommandAction.runWriteCommandAction(project) {
                     try {
-                        val newYaml = parentDir.createChildData(this, "load-test.gg.yaml")
+                        val newYaml = parentDir.createChildData(this, "traffic-sim.gg.yaml")
                         val content = """
                             config:
                               httpFile: "${httpFile.name}"
@@ -61,9 +65,16 @@ class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execut
                               breaker_threshold_pct: 20.0
                               jitter: 0.1
                               time_scale: 1.0
-                            
+
+                              # Optional overrides — omit to use app defaults (sample_rate: 0.05, max_samples: 200, max_body_kb: 0)
+                              # snap:
+                              #   sample_rate: 0.05
+                              #   max_samples: 200
+                              #   max_body_kb: 0
+
                             stages:
-                              - duration: 10s
+                              - name: "Ramp-up"
+                                duration: 10s
                                 target_rps: 50
                         """.trimIndent()
                         newYaml.setBinaryContent(content.toByteArray(Charsets.UTF_8))
@@ -77,5 +88,12 @@ class RunAndRecordSnapHttpAction : AnAction("Run && Record Snapshot...", "Execut
                 }
             }
         }
+
+        /**
+         * Explicit opt-in to the interactive TUI in a terminal.
+         * TODO: pass a capped-fps flag to gg here once it exists, so this path no longer risks the CPU/crash regression.
+         */
+        fun executeTestInteractive(project: Project, httpFile: VirtualFile) =
+            executeTest(project, httpFile, runInTerminal = true)
     }
 }

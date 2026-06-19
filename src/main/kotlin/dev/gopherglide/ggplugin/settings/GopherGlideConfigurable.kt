@@ -82,7 +82,7 @@ class GopherGlideConfigurable : Configurable {
                         SwingUtilities.invokeLater {
                             when {
                                 remoteClean == null -> {
-                                    statusLabel?.text = "⚠ Could not reach the update server. Check your connection."
+                                    statusLabel?.text = "⚠ ${manager.getLastRemoteVersionError() ?: "Could not reach the update server. Check your connection."}"
                                     checkButton?.isEnabled = true
                                 }
 
@@ -106,7 +106,7 @@ class GopherGlideConfigurable : Configurable {
                                                 statusLabel?.text = "✗ Update failed: ${error.message}"
                                             } else {
                                                 statusLabel?.text = "✓ Updated to v$remoteClean."
-                                                updateVersionInfo(versionLabel)
+                                                updateVersionInfo(versionLabel, checkButton)
                                             }
                                             checkButton?.isEnabled = true
                                         }
@@ -145,7 +145,7 @@ class GopherGlideConfigurable : Configurable {
             }
         }
 
-        updateVersionInfo(versionLabel)
+        updateVersionInfo(versionLabel, checkButton)
 
         return component!!
     }
@@ -163,7 +163,7 @@ class GopherGlideConfigurable : Configurable {
         return fallback.ifBlank { null }
     }
 
-    private fun updateVersionInfo(versionLabel: JLabel?) {
+    private fun updateVersionInfo(versionLabel: JLabel?, checkButton: JButton?) {
         val manager = BinaryManager.instance
 
         manager.getLocalVersion().whenComplete { localVerRaw, _ ->
@@ -184,6 +184,8 @@ class GopherGlideConfigurable : Configurable {
                     val localClean  = extractVersionNumber(localVersionOutput)
                     val remoteClean = extractVersionNumber(remoteVerRaw)
 
+                    checkButton?.text = if (localClean == null) "Install Gopher Glide" else "Check for Updates"
+
                     val localText  = localClean  ?: "Not found"
                     val remoteText = remoteClean ?: "Unknown"
 
@@ -200,7 +202,7 @@ class GopherGlideConfigurable : Configurable {
 
                     when {
                         localClean == null ->
-                            sb.append("<br><font color='orange'>Binary not found. Click 'Check for Updates' to install it.</font>")
+                            sb.append("<br><font color='orange'>Binary not found. Click 'Install Gopher Glide' to install it.</font>")
                         remoteClean != null && localClean != remoteClean ->
                             sb.append("<br><font color='red'><b>Update available!</b> Click 'Check for Updates' to upgrade.</font>")
                         localClean == remoteClean ->

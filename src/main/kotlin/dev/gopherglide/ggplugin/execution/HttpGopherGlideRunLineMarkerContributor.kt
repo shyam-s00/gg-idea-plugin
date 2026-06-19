@@ -56,9 +56,28 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
+        val interactiveAction = object : AnAction(
+            "Run in Terminal (Interactive)",
+            "Run with gg's interactive TUI in a terminal — enables live ↑/↓ RPS-bias control, costs more CPU than the default panel",
+            AllIcons.Actions.MoveTo2
+        ) {
+            override fun actionPerformed(e: AnActionEvent) {
+                val project = e.project ?: return
+                RunGopherGlideHttpAction.executeTestInteractive(project, virtualFile)
+            }
+
+            override fun update(e: AnActionEvent) {
+                e.presentation.isEnabledAndVisible = true
+            }
+
+            override fun getActionUpdateThread(): ActionUpdateThread {
+                return ActionUpdateThread.BGT
+            }
+        }
+
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action, snapAction),
+            arrayOf(action, snapAction, interactiveAction),
             { "Run Gopher-Glide " }
         )
     }

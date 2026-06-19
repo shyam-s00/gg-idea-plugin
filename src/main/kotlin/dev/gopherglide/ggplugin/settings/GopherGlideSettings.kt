@@ -11,6 +11,7 @@ import com.intellij.util.xmlb.XmlSerializerUtil
 class GopherGlideSettings : PersistentStateComponent<GopherGlideSettings> {
     var customBinaryPath: String = ""
     var customSnapshotsDir: String = ""
+    var dontAskForMissingBinary: Boolean = false
 
     override fun getState(): GopherGlideSettings = this
 
