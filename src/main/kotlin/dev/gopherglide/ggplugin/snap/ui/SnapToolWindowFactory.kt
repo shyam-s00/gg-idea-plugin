@@ -7,6 +7,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import dev.gopherglide.ggplugin.snap.SnapDataManager
 import dev.gopherglide.ggplugin.snap.SnapModel
+import dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.ViewSnapAction
@@ -35,6 +36,7 @@ object SnapToolWindowFactory {
         actionGroup.add(RefreshSnapsAction())
         actionGroup.add(ViewSnapAction())
         actionGroup.add(DiffSnapsAction())
+        actionGroup.add(AssertSnapsAction())
 
         val toolbar = ActionManager.getInstance().createActionToolbar("GopherGlideSnapToolbar", actionGroup, true)
         toolbar.targetComponent = table
