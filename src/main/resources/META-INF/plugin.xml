@@ -56,6 +56,13 @@
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
 
+        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
+                text="Gopher-Glide Test" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
+                icon="AllIcons.Actions.AddFile">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
+            <add-to-group group-id="GopherGlide.Menu" anchor="first"/>
+        </action>
+
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>

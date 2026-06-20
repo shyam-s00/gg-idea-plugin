@@ -1,17 +1,17 @@
 package dev.gopherglide.ggplugin.execution.ui
 
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.dsl.builder.panel
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
 import java.awt.BorderLayout
 import java.awt.Font
-import java.awt.GridLayout
 import javax.swing.BorderFactory
 import javax.swing.JButton
 import javax.swing.JPanel
 
 /**
- * Compact metrics card: status header + metric labels + a sparkline, updated once per ~5s heartbeat.
- * TODO: upgrade the sparkline to a stage-timeline + properly scaled RPS chart once this card has proven itself.
+ * Run dashboard: status header + metric labels + a scaled RPS chart + a stage timeline,
+ * updated once per ~5s heartbeat.
  */
 class GopherGlideRunPanel : JPanel(BorderLayout()) {
     private val statusLabel = JBLabel("Idle")
@@ -20,27 +20,31 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     private val errorRateValue = JBLabel("—")
     private val totalReqsValue = JBLabel("—")
     private val latencyValue = JBLabel("—")
-    private val sparkline = Sparkline()
+    private val rpsChart = RpsChartComponent()
+    private val stageTimeline = StageTimelineComponent()
     private val stopButton = JButton("Stop")
     private var runStartMs = 0L
     private var reachedTerminalState = false
+    private var currentProfile: String? = null
 
     init {
         border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
         statusLabel.font = statusLabel.font.deriveFont(Font.BOLD, statusLabel.font.size + 1f)
-        add(statusLabel, BorderLayout.NORTH)
 
-        val metrics = JPanel(GridLayout(5, 2, 6, 4))
-        metrics.add(JBLabel("Target RPS")); metrics.add(targetRpsValue)
-        metrics.add(JBLabel("Actual RPS")); metrics.add(actualRpsValue)
-        metrics.add(JBLabel("Error Rate")); metrics.add(errorRateValue)
-        metrics.add(JBLabel("Total Requests")); metrics.add(totalReqsValue)
-        metrics.add(JBLabel("p50 / p95 / p99")); metrics.add(latencyValue)
+        val header = panel {
+            row { cell(statusLabel) }
+            row("Target RPS:") { cell(targetRpsValue) }
+            row("Actual RPS:") { cell(actualRpsValue) }
+            row("Error Rate:") { cell(errorRateValue) }
+            row("Total Requests:") { cell(totalReqsValue) }
+            row("p50 / p95 / p99:") { cell(latencyValue) }
+        }
+        add(header, BorderLayout.NORTH)
 
         val center = JPanel(BorderLayout())
         center.border = BorderFactory.createEmptyBorder(8, 0, 8, 0)
-        center.add(metrics, BorderLayout.NORTH)
-        center.add(sparkline, BorderLayout.CENTER)
+        center.add(rpsChart, BorderLayout.CENTER)
+        center.add(stageTimeline, BorderLayout.SOUTH)
         add(center, BorderLayout.CENTER)
 
         stopButton.isEnabled = false
@@ -51,13 +55,15 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     fun reset() {
         runStartMs = System.currentTimeMillis()
         reachedTerminalState = false
+        currentProfile = null
         statusLabel.text = "Starting…"
         targetRpsValue.text = "—"
         actualRpsValue.text = "—"
         errorRateValue.text = "—"
         totalReqsValue.text = "—"
         latencyValue.text = "—"
-        sparkline.clear()
+        rpsChart.clear()
+        stageTimeline.clear()
     }
 
     fun onProcessStarted(onStop: () -> Unit) {
@@ -70,16 +76,23 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     fun update(payload: HeartbeatPayload) {
         val message = rebrand(payload.message)
         when (payload.event) {
-            "started" -> statusLabel.text = "● RUNNING — ${message.ifBlank { "Traffic simulation started" }}"
+            "started" -> {
+                currentProfile = payload.profile?.takeIf { it.isNotBlank() }
+                stageTimeline.setStages(payload.stages)
+                rpsChart.setKnownPeakRps(payload.stages?.maxOfOrNull { it.targetRps })
+                statusLabel.text = "● RUNNING — ${message.ifBlank { "Traffic simulation started" }}"
+            }
             "heartbeat" -> {
                 val elapsedSec = (System.currentTimeMillis() - runStartMs) / 1000
-                statusLabel.text = "● RUNNING — stage ${payload.stage}/${payload.totalStages} — ${elapsedSec}s"
+                val profileSuffix = currentProfile?.let { " — profile: $it" } ?: ""
+                statusLabel.text = "● RUNNING — stage ${payload.stage}/${payload.totalStages}$profileSuffix — ${elapsedSec}s"
                 targetRpsValue.text = "${payload.targetRps} rps"
                 actualRpsValue.text = "%.1f rps".format(payload.actualRps)
                 errorRateValue.text = "%.2f%%".format(payload.errorRate * 100)
                 totalReqsValue.text = payload.totalRequests.toString()
                 latencyValue.text = "%.1f / %.1f / %.1f ms".format(payload.p50Ms, payload.p95Ms, payload.p99Ms)
-                sparkline.addValue(payload.actualRps)
+                rpsChart.addDataPoint(payload.actualRps, payload.targetRps)
+                stageTimeline.update(payload.stage, payload.totalStages, elapsedSec.toDouble())
             }
             "finished" -> {
                 statusLabel.text = "✓ FINISHED — ${message.ifBlank { "Traffic simulation completed" }}"
