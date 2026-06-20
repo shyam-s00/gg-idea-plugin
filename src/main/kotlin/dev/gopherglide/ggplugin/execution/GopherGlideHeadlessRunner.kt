@@ -12,6 +12,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Key
 import dev.gopherglide.ggplugin.execution.ui.GopherGlideRunToolWindowFactory
+import dev.gopherglide.ggplugin.settings.GopherGlideSettings
 
 /**
  * Runs `gg --headless --reporter json` via [OSProcessHandler] (not the terminal widget) and feeds parsed
@@ -30,8 +31,12 @@ object GopherGlideHeadlessRunner {
         activeHandlers.remove(project)?.destroyProcess()
 
         try {
+            val heartbeatArgs = GopherGlideSettings.instance.heartbeatIntervalSeconds
+                .takeIf { it > 0 }
+                ?.let { listOf("--heartbeat-interval", "${it}s") }
+                ?: emptyList()
             val commandLine = GeneralCommandLine(binaryPath)
-                .withParameters(args + listOf("--headless", "--reporter", "json"))
+                .withParameters(args + listOf("--headless", "--reporter", "json") + heartbeatArgs)
             val handler = OSProcessHandler(commandLine)
             activeHandlers[project] = handler
             val stderrTail = StringBuilder()

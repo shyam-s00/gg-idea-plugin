@@ -10,15 +10,19 @@ import javax.swing.JComponent
 
 /**
  * RPS-over-time chart: solid line for actual RPS, dotted line for target RPS, with a labeled
- * y-axis. Replaces the old bare sparkline (which auto-fit its own max and had no axis at all).
- * Fed one point per heartbeat (~5s), same as before — repaints are this cheap by construction.
+ * y-axis. When the run's total duration is known (the `stages` array resolved on the "started"
+ * heartbeat), the x-axis is fixed to that duration and each point is drawn at its real
+ * elapsed-time position — the same time model the stage timeline below it uses, so the two stay
+ * in sync as the run progresses. Falls back to a scrolling window of recent points (the original
+ * behavior) when the duration isn't known, e.g. against a pre-v1.1.0 `gg` binary.
  */
 class RpsChartComponent : JComponent() {
-    private data class Point(val actualRps: Double, val targetRps: Int)
+    private data class Point(val elapsedSec: Double, val actualRps: Double, val targetRps: Int)
 
     private val points = mutableListOf<Point>()
     private var yAxisMax = 0.0
-    private val maxPoints = 60
+    private var totalDurationSec = 0.0
+    private val maxFallbackPoints = 60
 
     init {
         preferredSize = Dimension(300, 120)
@@ -35,9 +39,19 @@ class RpsChartComponent : JComponent() {
         repaint()
     }
 
-    fun addDataPoint(actualRps: Double, targetRps: Int) {
-        points.add(Point(actualRps, targetRps))
-        if (points.size > maxPoints) points.removeAt(0)
+    /**
+     * Call once, from the "started" heartbeat, with the total resolved stage duration
+     * (e.g. `stages?.sumOf { it.durationSeconds }`). Null/0 means "unknown" — the chart then
+     * falls back to a scrolling window of the most recent points instead of a fixed axis.
+     */
+    fun setTotalDuration(totalSec: Double?) {
+        totalDurationSec = totalSec?.takeIf { it > 0.0 } ?: 0.0
+        repaint()
+    }
+
+    fun addDataPoint(elapsedSec: Double, actualRps: Double, targetRps: Int) {
+        points.add(Point(elapsedSec, actualRps, targetRps))
+        if (totalDurationSec <= 0.0 && points.size > maxFallbackPoints) points.removeAt(0)
         if (yAxisMax <= 0.0) {
             yAxisMax = maxOf(yAxisMax, actualRps, targetRps.toDouble())
         }
@@ -47,6 +61,7 @@ class RpsChartComponent : JComponent() {
     fun clear() {
         points.clear()
         yAxisMax = 0.0
+        totalDurationSec = 0.0
         repaint()
     }
 
@@ -80,19 +95,30 @@ class RpsChartComponent : JComponent() {
 
         if (points.size < 2) return
 
+        val fixedDuration = totalDurationSec
         fun yFor(value: Double) = topPad + (chartHeight * (1 - (value / yMax).coerceIn(0.0, 1.0))).toInt()
-        fun xFor(index: Int) = leftPad + (chartWidth * index / (points.size - 1).coerceAtLeast(1))
+        fun xFor(point: Point, index: Int) = if (fixedDuration > 0.0) {
+            leftPad + (chartWidth * (point.elapsedSec / fixedDuration)).toInt().coerceIn(0, chartWidth)
+        } else {
+            leftPad + (chartWidth * index / (points.size - 1).coerceAtLeast(1))
+        }
 
         g2.color = targetColor
         g2.stroke = BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f, floatArrayOf(4f, 4f), 0f)
         for (i in 1 until points.size) {
-            g2.drawLine(xFor(i - 1), yFor(points[i - 1].targetRps.toDouble()), xFor(i), yFor(points[i].targetRps.toDouble()))
+            g2.drawLine(
+                xFor(points[i - 1], i - 1), yFor(points[i - 1].targetRps.toDouble()),
+                xFor(points[i], i), yFor(points[i].targetRps.toDouble())
+            )
         }
 
         g2.color = actualColor
         g2.stroke = BasicStroke(2f)
         for (i in 1 until points.size) {
-            g2.drawLine(xFor(i - 1), yFor(points[i - 1].actualRps), xFor(i), yFor(points[i].actualRps))
+            g2.drawLine(
+                xFor(points[i - 1], i - 1), yFor(points[i - 1].actualRps),
+                xFor(points[i], i), yFor(points[i].actualRps)
+            )
         }
     }
 }

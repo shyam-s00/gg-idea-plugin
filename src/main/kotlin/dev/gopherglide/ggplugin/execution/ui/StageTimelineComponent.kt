@@ -21,8 +21,8 @@ class StageTimelineComponent : JComponent() {
     private var elapsedSec: Double = 0.0
 
     init {
-        preferredSize = Dimension(200, 36)
-        minimumSize = Dimension(120, 28)
+        preferredSize = Dimension(200, 48)
+        minimumSize = Dimension(120, 40)
     }
 
     /** Call once, from the "started" heartbeat. Null/empty renders the equal-width fallback. */
@@ -56,7 +56,7 @@ class StageTimelineComponent : JComponent() {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 
         val barTop = 4
-        val barHeight = (height - 16).coerceAtLeast(8)
+        val barHeight = (height - 22).coerceAtLeast(8)
         val gap = 2
         val usableWidth = (width - gap * (segmentCount - 1)).coerceAtLeast(segmentCount)
 

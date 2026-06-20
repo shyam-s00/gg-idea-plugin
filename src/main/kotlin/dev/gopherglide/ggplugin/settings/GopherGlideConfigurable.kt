@@ -5,6 +5,7 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextBrowseFolderListener
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
 import dev.gopherglide.ggplugin.services.BinaryManager
@@ -21,6 +22,7 @@ class GopherGlideConfigurable : Configurable {
     private var component: JComponent? = null
     private var binaryPathField: TextFieldWithBrowseButton? = null
     private var snapshotsDirField: TextFieldWithBrowseButton? = null
+    private var heartbeatIntervalSpinner: JBIntSpinner? = null
 
     override fun getDisplayName(): String = "Gopher Glide"
 
@@ -38,6 +40,9 @@ class GopherGlideConfigurable : Configurable {
             .withDescription("Select the directory where Gopher-Glide snapshots are stored.")
         sField.addBrowseFolderListener(TextBrowseFolderListener(sDescriptor))
         snapshotsDirField = sField
+
+        val intervalSpinner = JBIntSpinner(0, 0, 60)
+        heartbeatIntervalSpinner = intervalSpinner
 
         var statusLabel: JLabel? = null
         var versionLabel: JLabel? = null
@@ -57,6 +62,14 @@ class GopherGlideConfigurable : Configurable {
             }
             row {
                 label("Leave empty to use OS default (~/.config/gg/snapshots, etc).")
+            }
+
+            row("Run panel refresh interval:") {
+                cell(intervalSpinner)
+                label("seconds")
+            }
+            row {
+                label("0 = use gg's default (5s). Takes effect on the next run — gg reads this at startup, not live.")
             }
 
             row {
@@ -219,24 +232,28 @@ class GopherGlideConfigurable : Configurable {
     override fun isModified(): Boolean {
         val settings = GopherGlideSettings.instance
         return binaryPathField?.text != settings.customBinaryPath ||
-               snapshotsDirField?.text != settings.customSnapshotsDir
+               snapshotsDirField?.text != settings.customSnapshotsDir ||
+               heartbeatIntervalSpinner?.number != settings.heartbeatIntervalSeconds
     }
 
     override fun apply() {
         val settings = GopherGlideSettings.instance
         settings.customBinaryPath = binaryPathField?.text ?: ""
         settings.customSnapshotsDir = snapshotsDirField?.text ?: ""
+        settings.heartbeatIntervalSeconds = heartbeatIntervalSpinner?.number ?: 0
     }
 
     override fun reset() {
         val settings = GopherGlideSettings.instance
         binaryPathField?.text = settings.customBinaryPath
         snapshotsDirField?.text = settings.customSnapshotsDir
+        heartbeatIntervalSpinner?.number = settings.heartbeatIntervalSeconds
     }
 
     override fun disposeUIResources() {
         component = null
         binaryPathField = null
         snapshotsDirField = null
+        heartbeatIntervalSpinner = null
     }
 }

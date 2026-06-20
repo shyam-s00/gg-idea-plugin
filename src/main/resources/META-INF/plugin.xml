@@ -55,6 +55,7 @@
         <action id="GopherGlide.RefreshSnaps" class="dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction" text="Refresh Snaps" icon="AllIcons.Actions.Refresh"/>
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
+        <action id="GopherGlide.StopRun" class="dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction" text="Stop" icon="AllIcons.Actions.Suspend"/>
 
         <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
                 text="Gopher-Glide Test" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
