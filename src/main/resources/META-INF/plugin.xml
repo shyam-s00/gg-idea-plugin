@@ -13,8 +13,7 @@
         <ul>
         <li><b>One-click runs</b> — execute a traffic simulation, or scaffold a new run config, straight from any <code>.http</code> file or <code>.gg.yaml</code> config via gutter icons or the right-click menu.</li>
         <li><b>Native run panel</b> — a dedicated "Gopher Glide" tool window shows live stage progress, RPS, error rate, and latency percentiles while a simulation runs.</li>
-        <li><b>Interactive TUI on demand</b> — opt into gg's full terminal UI, including live &uarr;/&darr; RPS-bias control, any time you want hands-on control instead of the panel.</li>
-        <li><b>Snapshot comparison</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas) to spot API regressions, right from the same tool window.</li>
+        <li><b>Native snapshot comparison</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas) to spot API regressions, entirely inside the tool window — no terminal involved.</li>
         <li><b>Schema-validated config</b> — JSON Schema completion and validation for <code>.gg.yaml</code> files, covering stages, snapshot tuning, and built-in profiles.</li>
         <li><b>Zero manual setup</b> — the plugin downloads and manages the gg binary for you, with update checks and diagnostics built into Settings &rarr; Gopher Glide.</li>
         </ul>
@@ -25,7 +24,6 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
-    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable
@@ -57,13 +55,6 @@
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
         <action id="GopherGlide.StopRun" class="dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction" text="Stop" icon="AllIcons.Actions.Suspend"/>
 
-        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
-                text="Gopher-Glide Test" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
-                icon="AllIcons.Actions.AddFile">
-            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
-            <add-to-group group-id="GopherGlide.Menu" anchor="first"/>
-        </action>
-
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
@@ -77,5 +68,12 @@
             <action id="GopherGlide.RunConfigHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideConfigHttpAction" text="Run (Config)" description="Run this HTTP file's sibling .gg.yaml config directly — no profile or overrides" icon="AllIcons.Actions.Execute"/>
             <action id="GopherGlide.GenerateConfigYamlHttp" class="dev.gopherglide.ggplugin.execution.GenerateConfigYamlHttpAction" text="Generate config.yaml..." description="Scaffold a .gg.yaml config for this HTTP file without running anything" icon="AllIcons.FileTypes.Yaml"/>
         </group>
+
+        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
+                text="Gopher-Glide Test" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
+                icon="AllIcons.Actions.AddFile">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
+            <add-to-group group-id="GopherGlide.Menu" anchor="first"/>
+        </action>
     </actions>
 </idea-plugin>
