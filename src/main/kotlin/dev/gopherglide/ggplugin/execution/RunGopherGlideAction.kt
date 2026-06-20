@@ -8,6 +8,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
+/**
+ * "Run GG" for `.gg.yaml` files themselves: shows the shared [SnapOptionsDialog] (config owns
+ * everything else about the run), then executes directly — no profile picker, since the file
+ * already *is* the config.
+ */
 class RunGopherGlideAction : AnAction("Run GG", "Execute the Gopher-Glide traffic simulation", com.intellij.icons.AllIcons.Actions.Execute) {
 
     override fun getActionUpdateThread(): ActionUpdateThread {
@@ -22,26 +27,27 @@ class RunGopherGlideAction : AnAction("Run GG", "Execute the Gopher-Glide traffi
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val file = e.getData(CommonDataKeys.VIRTUAL_FILE) ?: return
-        executeTest(project, file)
+        promptAndRun(project, file)
     }
 
     companion object {
         private val log = Logger.getInstance(RunGopherGlideAction::class.java)
 
-        fun executeTest(project: Project, file: VirtualFile, runInTerminal: Boolean = false) {
-            log.info("Starting Gopher-Glide run for: ${file.path}")
-            if (runInTerminal) {
-                TerminalExecutor.execute(project, file.path)
-            } else {
-                GopherGlideExecutor.execute(project, file.path)
-            }
-        }
+        fun promptAndRun(project: Project, file: VirtualFile) {
+            val dialog = SnapOptionsDialog(project)
+            if (!dialog.showAndGet()) return
 
-        /**
-         * Explicit opt-in to the interactive TUI in a terminal.
-         * TODO: pass a capped-fps flag to gg here once it exists, so this path no longer risks the CPU/crash regression.
-         */
-        fun executeTestInteractive(project: Project, file: VirtualFile) =
-            executeTest(project, file, runInTerminal = true)
+            val args = mutableListOf(file.path)
+            if (dialog.snapEnabled) {
+                args.add("--snap")
+                dialog.snapTag?.let {
+                    args.add("--snap-tag")
+                    args.add(it)
+                }
+            }
+
+            log.info("Starting Gopher-Glide run for: ${file.path}")
+            GopherGlideExecutor.execute(project, *args.toTypedArray())
+        }
     }
 }

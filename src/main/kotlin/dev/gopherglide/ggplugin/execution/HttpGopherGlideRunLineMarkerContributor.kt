@@ -26,10 +26,12 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
         val prevSibling = element.prevSibling
         if (prevSibling != null && !prevSibling.text.contains("\n")) return null
 
-        val action = object : AnAction("Run Gopher-Glide", "Execute GG binary for this HTTP file", AllIcons.RunConfigurations.TestState.Run) {
+        val hasSiblingYaml = virtualFile.parent?.children?.any { it.name.endsWith(".gg.yaml") } == true
+
+        val action = object : AnAction("Run GG", "Pick one of gg's built-in load profiles and run it against this HTTP file", AllIcons.Actions.Execute) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
-                RunGopherGlideHttpAction.executeTest(project, virtualFile)
+                RunGopherGlideHttpAction.showProfilePicker(project, virtualFile, e.dataContext)
             }
 
             override fun update(e: AnActionEvent) {
@@ -41,52 +43,19 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
             }
         }
 
-        val snapAction = object : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot for this HTTP file", AllIcons.Actions.Dump) {
-            override fun actionPerformed(e: AnActionEvent) {
-                val project = e.project ?: return
-                RunAndRecordSnapHttpAction.executeTest(project, virtualFile)
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabledAndVisible = true
-            }
-
-            override fun getActionUpdateThread(): ActionUpdateThread {
-                return ActionUpdateThread.BGT
-            }
-        }
-
-        val profileAction = object : AnAction(
-            "Run with Profile...",
-            "Pick one of gg's built-in load profiles and run it against this HTTP file",
-            AllIcons.Actions.ListFiles
+        val configAction = object : AnAction(
+            "Run GG (Config)",
+            "Run this HTTP file's sibling .gg.yaml config directly — no profile or overrides",
+            AllIcons.Actions.Execute
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
-                RunWithProfileHttpAction.showProfilePicker(project, virtualFile, e.dataContext)
+                val yamlFile = virtualFile.parent?.children?.firstOrNull { it.name.endsWith(".gg.yaml") } ?: return
+                RunGopherGlideConfigHttpAction.runConfig(project, yamlFile)
             }
 
             override fun update(e: AnActionEvent) {
-                e.presentation.isEnabledAndVisible = true
-            }
-
-            override fun getActionUpdateThread(): ActionUpdateThread {
-                return ActionUpdateThread.BGT
-            }
-        }
-
-        val interactiveAction = object : AnAction(
-            "Run in Terminal (Interactive)",
-            "Run with gg's interactive TUI in a terminal — enables live ↑/↓ RPS-bias control, costs more CPU than the default panel",
-            AllIcons.Actions.MoveTo2
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                val project = e.project ?: return
-                RunGopherGlideHttpAction.executeTestInteractive(project, virtualFile)
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabledAndVisible = true
+                e.presentation.isEnabledAndVisible = hasSiblingYaml
             }
 
             override fun getActionUpdateThread(): ActionUpdateThread {
@@ -101,7 +70,7 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
-                RunGopherGlideHttpAction.generateConfigYaml(project, virtualFile)
+                GenerateConfigYaml.generate(project, virtualFile)
             }
 
             override fun update(e: AnActionEvent) {
@@ -115,7 +84,7 @@ class HttpGopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
 
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action, snapAction, profileAction, interactiveAction, generateConfigAction),
+            arrayOf(action, configAction, generateConfigAction),
             { "Run Gopher-Glide " }
         )
     }

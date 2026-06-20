@@ -70,13 +70,12 @@
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
 
             <!-- YAML actions -->
-            <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run Gopher-Glide" icon="AllIcons.Actions.Execute"/>
-            <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run &amp;&amp; Record" description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.Dump"/>
+            <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run this Gopher-Glide config — prompts for an optional snapshot tag first" icon="AllIcons.Actions.Execute"/>
 
             <!-- HTTP actions -->
-            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Run a zero-config profile, or this file's .gg.yaml config if one exists" icon="AllIcons.Actions.Execute"/>
-            <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute a traffic simulation and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
-            <action id="GopherGlide.RunWithProfileHttp" class="dev.gopherglide.ggplugin.execution.RunWithProfileHttpAction" text="Run with Profile..." description="Pick one of gg's built-in load profiles and run it against this HTTP file" icon="AllIcons.Actions.ListFiles"/>
+            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Pick one of gg's built-in load profiles and run it against this HTTP file" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunConfigHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideConfigHttpAction" text="Run (Config)" description="Run this HTTP file's sibling .gg.yaml config directly — no profile or overrides" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.GenerateConfigYamlHttp" class="dev.gopherglide.ggplugin.execution.GenerateConfigYamlHttpAction" text="Generate config.yaml..." description="Scaffold a .gg.yaml config for this HTTP file without running anything" icon="AllIcons.FileTypes.Yaml"/>
         </group>
     </actions>
 </idea-plugin>

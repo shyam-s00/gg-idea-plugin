@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "4.0.0"
+version = project.findProperty("pluginVersion") ?: "4.9.0"
 
 repositories {
     mavenCentral()

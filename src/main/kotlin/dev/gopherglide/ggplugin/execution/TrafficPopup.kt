@@ -9,13 +9,15 @@ import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent
 
 /**
- * Lets the user override a profile's `--peak-rps`/`--duration` before running it, pre-filled with
- * the profile's own defaults. Leaving a field unchanged means no override flag is added to the
- * command — `gg` falls back to the profile's built-in value.
+ * Single dialog for the profile-driven "Run GG" flow: lets the user override a profile's
+ * `--peak-rps`/`--duration` (pre-filled with the profile's own defaults — leaving a field
+ * unchanged means no override flag is added), and optionally record a snapshot (shared
+ * [SnapOptionsPanel]).
  */
-class ProfileOverrideDialog(project: Project, private val profile: GgProfile) : DialogWrapper(project) {
+class TrafficPopup(project: Project, private val profile: GgProfile) : DialogWrapper(project) {
     private val peakRpsField = JBTextField(profile.defaultPeakRps.toString())
     private val durationField = JBTextField(profile.defaultDuration)
+    private val snapOptions = SnapOptionsPanel()
 
     val peakRpsOverride: Int?
         get() = peakRpsField.text.trim()
@@ -26,6 +28,9 @@ class ProfileOverrideDialog(project: Project, private val profile: GgProfile) : 
         get() = durationField.text.trim()
             .takeIf { it.isNotBlank() && it != profile.defaultDuration }
 
+    val snapEnabled: Boolean get() = snapOptions.snapEnabled
+    val snapTag: String? get() = snapOptions.snapTag
+
     init {
         title = "Run \"${profile.name}\" Profile"
         init()
@@ -35,11 +40,15 @@ class ProfileOverrideDialog(project: Project, private val profile: GgProfile) : 
         val descriptionLabel = JBLabel("<html><div width='320'>${profile.description}</div></html>")
         descriptionLabel.foreground = JBColor.GRAY
 
-        return FormBuilder.createFormBuilder()
+        val formBuilder = FormBuilder.createFormBuilder()
             .addComponent(descriptionLabel)
             .addVerticalGap(8)
             .addLabeledComponent("Peak RPS (--peak-rps):", peakRpsField)
             .addLabeledComponent("Duration (--duration):", durationField)
-            .panel
+            .addVerticalGap(8)
+
+        snapOptions.addTo(formBuilder)
+
+        return formBuilder.panel
     }
 }
