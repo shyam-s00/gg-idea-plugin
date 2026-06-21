@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "4.9.0"
+version = project.findProperty("pluginVersion") ?: "5.0.0"
 
 repositories {
     mavenCentral()
@@ -33,16 +33,17 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <b>Stability fix for the new gg interactive TUI</b><br>
-            A recent gg update increased the interactive TUI's redraw rate, which could pin a CPU core and freeze or crash the IDE when running a simulation from the plugin. This release fixes that:
+            <b>A complete, terminal-free Snap workflow, plus a richer run dashboard</b><br>
+            This release rounds the plugin out into a full regression-testing loop you never need to leave the editor for:
             <ul>
-            <li>Runs now default to a new, lightweight native <b>"Gopher Glide" run panel</b> showing live stage progress, RPS, error rate, and latency — instead of rendering gg's full terminal UI inside the IDE.</li>
-            <li>The full interactive TUI, including live &uarr;/&darr; RPS-bias control, is still available as an explicit "Run in Terminal (Interactive)" option for anyone who wants it.</li>
-            <li>Snaps and the new Run panel are now combined into one "Gopher Glide" tool window with tabs, instead of two separate sidebar icons.</li>
-            <li>Improved first-run experience: the plugin now proactively detects a missing gg binary and offers to install it, with visible download progress, instead of silently hanging on your first Run click.</li>
-            <li>Terminology aligned with gg's "traffic simulation" branding throughout the plugin.</li>
+            <li><b>Native snapshot viewer &amp; diff</b> — view a snapshot's latency, status distribution, and inferred schema, or diff two snapshots side-by-side, without dropping into gg's interactive terminal TUI.</li>
+            <li><b>Snap Assert from the IDE</b> — run <code>gg snap assert</code> between any two snapshots and see a pass/fail breakdown in a native dialog.</li>
+            <li><b>Snap Prune from the IDE</b> — clean up old snapshots by ID, tag, keep-last count, or age, with a dry-run preview before anything is deleted.</li>
+            <li><b>One-click CI Workflow Generator</b> — a new "Generate CI Workflow..." action scaffolds a ready-to-run GitHub Actions workflow implementing headless run &rarr; snap &rarr; assert &rarr; PR comment, matching the pattern documented at gopherglide.dev/snap.</li>
+            <li><b>Built-in profile picker</b> — run any <code>.http</code> file against a profile (smoke, load, stress, soak, spike) with zero config, with an override dialog for one-off tweaks.</li>
+            <li><b>Richer run dashboard</b> — the native run panel now shows a live stage timeline and RPS chart alongside error rate and latency percentiles.</li>
+            <li>Reorganized the right-click "Gopher Glide (GG)" menu into logical groups (Run, Generate, CI) and renamed "Gopher-Glide Test" to "Add GG http file" for clarity.</li>
             </ul>
-            <b>Coming next:</b> a one-click built-in profile picker for zero-config runs, native IntelliJ Run Configuration support, and request-chaining navigation/completion for <code>@gg-export</code> variables.
         """.trimIndent()
     }
 
