@@ -7,9 +7,8 @@ import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.services.BinaryManager
 
 /**
- * Default entry point for running `gg` from the IDE: launches headlessly into the native run panel
- * (see [GopherGlideHeadlessRunner]) instead of the interactive TUI in a terminal. [TerminalExecutor]
- * remains available as the explicit "Run in Terminal (interactive)" opt-in for live RPS-bias control.
+ * Entry point for running `gg` from the IDE: launches headlessly into the native run panel
+ * (see [GopherGlideHeadlessRunner]) — there is no terminal/TUI execution path.
  */
 object GopherGlideExecutor {
     fun execute(project: Project, vararg args: String) {

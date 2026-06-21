@@ -3,7 +3,7 @@ package dev.gopherglide.ggplugin.snap.actions
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import dev.gopherglide.ggplugin.execution.TerminalExecutor
+import dev.gopherglide.ggplugin.snap.ui.SnapDiffDialog
 import dev.gopherglide.ggplugin.snap.ui.SnapToolWindowFactory
 
 class DiffSnapsAction : AnAction("Compare Selected (Diff)", "Compare two snapshots", com.intellij.icons.AllIcons.Actions.Diff) {
@@ -26,13 +26,8 @@ class DiffSnapsAction : AnAction("Compare Selected (Diff)", "Compare two snapsho
         val project = e.project ?: return
         val selectedSnaps = SnapToolWindowFactory.getSelectedSnaps(project)
         if (selectedSnaps.size == 2) {
-            val id1 = selectedSnaps[0].internalIndex
-            val id2 = selectedSnaps[1].internalIndex
-            if (id1.isBlank() || id2.isBlank()) {
-                com.intellij.openapi.ui.Messages.showWarningDialog(project, "Internal index is missing. Please click 'Refresh Snaps' on the toolbar to reload the data.", "Refresh Required")
-                return
-            }
-            TerminalExecutor.execute(project, "snap", "diff", id1, id2)
+            val (baseline, compare) = selectedSnaps.sortedBy { it.meta?.startTime ?: "" }
+            SnapDiffDialog.show(project, baseline, compare)
         }
     }
 }

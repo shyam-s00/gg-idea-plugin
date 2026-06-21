@@ -5,10 +5,11 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
-import dev.gopherglide.ggplugin.execution.TerminalExecutor
 import dev.gopherglide.ggplugin.snap.SnapDataManager
 import dev.gopherglide.ggplugin.snap.SnapModel
+import dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction
+import dev.gopherglide.ggplugin.snap.actions.PruneSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.ViewSnapAction
 import java.awt.BorderLayout
@@ -36,6 +37,8 @@ object SnapToolWindowFactory {
         actionGroup.add(RefreshSnapsAction())
         actionGroup.add(ViewSnapAction())
         actionGroup.add(DiffSnapsAction())
+        actionGroup.add(AssertSnapsAction())
+        actionGroup.add(PruneSnapsAction())
 
         val toolbar = ActionManager.getInstance().createActionToolbar("GopherGlideSnapToolbar", actionGroup, true)
         toolbar.targetComponent = table
@@ -47,12 +50,7 @@ object SnapToolWindowFactory {
                 if (e.clickCount == 2 && table.selectedRowCount == 1) {
                     val snap = getSelectedSnaps(project).firstOrNull()
                     if (snap != null) {
-                        val snapId = snap.internalIndex
-                        if (snapId.isBlank()) {
-                            com.intellij.openapi.ui.Messages.showWarningDialog(project, "Internal index is missing. Please click 'Refresh Snaps' on the toolbar to reload the data.", "Refresh Required")
-                            return
-                        }
-                        TerminalExecutor.execute(project, "snap", "view", snapId)
+                        SnapViewDialog.show(project, snap)
                     }
                 }
             }

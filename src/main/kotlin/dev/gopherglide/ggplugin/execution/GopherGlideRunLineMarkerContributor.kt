@@ -26,49 +26,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
         val action = object : AnAction("Run GG", "Execute the Gopher-Glide", AllIcons.Actions.Execute) {
             override fun actionPerformed(e: AnActionEvent) {
                 val project = e.project ?: return
-                RunGopherGlideAction.executeTest(project, virtualFile)
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabledAndVisible = true
-            }
-
-            override fun getActionUpdateThread(): ActionUpdateThread {
-                return ActionUpdateThread.BGT
-            }
-        }
-
-        val snapAction = object : AnAction("Run && Record Snapshot...", "Execute GG and record a snapshot", AllIcons.Actions.Dump) {
-            override fun actionPerformed(e: AnActionEvent) {
-                val project = e.project ?: return
-                val tag = com.intellij.openapi.ui.Messages.showInputDialog(
-                    project,
-                    "Enter Snapshot Tag (leave blank for default):",
-                    "Record Snapshot",
-                    com.intellij.openapi.ui.Messages.getQuestionIcon()
-                )
-                if (tag != null) {
-                    RunAndRecordSnapAction.executeTest(project, virtualFile, tag)
-                }
-            }
-
-            override fun update(e: AnActionEvent) {
-                e.presentation.isEnabledAndVisible = true
-            }
-
-            override fun getActionUpdateThread(): ActionUpdateThread {
-                return ActionUpdateThread.BGT
-            }
-        }
-
-        val interactiveAction = object : AnAction(
-            "Run in Terminal (Interactive)",
-            "Run with gg's interactive TUI in a terminal — enables live ↑/↓ RPS-bias control, costs more CPU than the default panel",
-            AllIcons.Actions.MoveTo2
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                val project = e.project ?: return
-                RunGopherGlideAction.executeTestInteractive(project, virtualFile)
+                RunGopherGlideAction.promptAndRun(project, virtualFile)
             }
 
             override fun update(e: AnActionEvent) {
@@ -82,7 +40,7 @@ class GopherGlideRunLineMarkerContributor : RunLineMarkerContributor() {
 
         return Info(
             AllIcons.RunConfigurations.TestState.Run,
-            arrayOf(action, snapAction, interactiveAction),
+            arrayOf(action),
             { "Run GG" }
         )
     }

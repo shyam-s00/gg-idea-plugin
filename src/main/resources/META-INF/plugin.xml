@@ -11,10 +11,10 @@
 
         This plugin brings gg's traffic-simulation workflow directly into the IDE:
         <ul>
-        <li><b>One-click runs</b> — execute a traffic simulation, or scaffold a new run config, straight from any <code>.http</code> file or <code>.gg.yaml</code> config via gutter icons or the right-click menu.</li>
-        <li><b>Native run panel</b> — a dedicated "Gopher Glide" tool window shows live stage progress, RPS, error rate, and latency percentiles while a simulation runs.</li>
-        <li><b>Interactive TUI on demand</b> — opt into gg's full terminal UI, including live &uarr;/&darr; RPS-bias control, any time you want hands-on control instead of the panel.</li>
-        <li><b>Snapshot comparison</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas) to spot API regressions, right from the same tool window.</li>
+        <li><b>One-click runs</b> — execute a traffic simulation, or scaffold a new run config, straight from any <code>.http</code> file or <code>.gg.yaml</code> config via gutter icons or the right-click menu, with a built-in profile picker (smoke, load, stress, soak, spike) for zero-config runs.</li>
+        <li><b>Native run dashboard</b> — a dedicated "Gopher Glide" tool window shows a live stage timeline, RPS chart, error rate, and latency percentiles while a simulation runs — no terminal TUI involved.</li>
+        <li><b>Native snapshot workflow</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas), run <code>gg snap assert</code> to gate regressions, and prune old snapshots by ID, tag, or age — entirely inside the tool window, no terminal involved.</li>
+        <li><b>One-click CI workflow generator</b> — scaffold a ready-to-run GitHub Actions workflow that snaps a headless run, asserts it against your main-branch baseline, and posts the result as a PR comment.</li>
         <li><b>Schema-validated config</b> — JSON Schema completion and validation for <code>.gg.yaml</code> files, covering stages, snapshot tuning, and built-in profiles.</li>
         <li><b>Zero manual setup</b> — the plugin downloads and manages the gg binary for you, with update checks and diagnostics built into Settings &rarr; Gopher Glide.</li>
         </ul>
@@ -25,7 +25,6 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.json</depends>
     <depends>org.jetbrains.plugins.yaml</depends>
-    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable
@@ -55,19 +54,39 @@
         <action id="GopherGlide.RefreshSnaps" class="dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction" text="Refresh Snaps" icon="AllIcons.Actions.Refresh"/>
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
+        <action id="GopherGlide.AssertSnaps" class="dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction" text="Assert..." description="Run gg snap assert between two snapshots" icon="AllIcons.RunConfigurations.TestState.Run"/>
+        <action id="GopherGlide.PruneSnaps" class="dev.gopherglide.ggplugin.snap.actions.PruneSnapsAction" text="Prune..." description="Delete snapshots by ID, keep-last, older-than, or tag filter" icon="AllIcons.Actions.GC"/>
+        <action id="GopherGlide.StopRun" class="dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction" text="Stop" icon="AllIcons.Actions.Suspend"/>
+        <action id="GopherGlide.GenerateCiWorkflow" class="dev.gopherglide.ggplugin.ci.GenerateCiWorkflowAction" text="Generate CI Workflow..." description="Scaffold a .github/workflows/gg.yml that runs gg snap + assert and posts the result as a PR comment" icon="AllIcons.Vcs.Vendors.Github">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
 
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
 
-            <!-- YAML actions -->
-            <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run Gopher-Glide" icon="AllIcons.Actions.Execute"/>
-            <action id="GopherGlide.RunAndRecordSnap" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapAction" text="Run &amp;&amp; Record" description="Run Gopher-Glide and record a snapshot" icon="AllIcons.Actions.Dump"/>
+            <!-- Run -->
+            <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run this Gopher-Glide config — prompts for an optional snapshot tag first" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Pick one of gg's built-in load profiles and run it against this HTTP file" icon="AllIcons.Actions.Execute"/>
+            <action id="GopherGlide.RunConfigHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideConfigHttpAction" text="Run (Config)" description="Run this HTTP file's sibling .gg.yaml config directly — no profile or overrides" icon="AllIcons.Actions.Execute"/>
 
-            <!-- HTTP actions -->
-            <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Execute or create a traffic simulation for this HTTP file" icon="AllIcons.Actions.Execute"/>
-            <action id="GopherGlide.RunAndRecordSnapHttp" class="dev.gopherglide.ggplugin.execution.RunAndRecordSnapHttpAction" text="Run &amp;&amp; Record" description="Execute a traffic simulation and record a snapshot for this HTTP file" icon="AllIcons.Actions.Dump"/>
+            <separator/>
+
+            <!-- Scaffolding -->
+            <action id="GopherGlide.GenerateConfigYamlHttp" class="dev.gopherglide.ggplugin.execution.GenerateConfigYamlHttpAction" text="Generate config.yaml..." description="Scaffold a .gg.yaml config for this HTTP file without running anything" icon="AllIcons.FileTypes.Yaml"/>
+            <reference id="GopherGlide.NewHttpTest"/>
+
+            <separator/>
+
+            <!-- CI -->
+            <reference id="GopherGlide.GenerateCiWorkflow"/>
         </group>
+
+        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
+                text="Add GG http file" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
+                icon="AllIcons.Actions.AddFile">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
+        </action>
     </actions>
 </idea-plugin>
