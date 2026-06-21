@@ -5,7 +5,7 @@
 
 Gopher Glide brings fast execution and navigation for [Gopher-Glide (`gg`)](https://gopherglide.dev/) — a zero-scripting API traffic simulation and performance benchmarking CLI — directly into JetBrains IDEs.
 
-Run traffic simulations, record performance snapshots, compare results over time, and navigate config files — all without leaving your editor.
+Run traffic simulations, record and compare performance snapshots, gate regressions in CI, and navigate config files — all without leaving your editor or dropping into a terminal.
 
 ---
 
@@ -13,36 +13,34 @@ Run traffic simulations, record performance snapshots, compare results over time
 
 ### ▶ Run traffic simulations from the editor
 
-- **Gutter run icons** appear on `.gg.yaml` and `.http` files:
-  - **Run** — executes the simulation in the native Gopher Glide run panel (see below).
-  - **Run && Record** — same, plus records a performance snapshot.
-  - **Run in Terminal (Interactive)** — runs gg's full interactive terminal UI instead, with live ↑ / ↓ RPS-bias control.
-- **Context menu actions** (Run / Run && Record) are available in the Project View, Editor, and Editor Tab right-click menus under **Gopher Glide (GG)**.
-- Running a `.http` file with no sibling `.gg.yaml` scaffolds a starter `traffic-sim.gg.yaml` and opens it for editing.
+- **Gutter run icons** on `.http` files:
+  - **Run GG** — opens a profile picker with all 21 of gg's built-in load profiles (grouped by category: E-Commerce, Standard Testing/CI, Resilience/Chaos, Auto-Scaling, Specialized), then lets you override peak RPS/duration and optionally record a snapshot before running.
+  - **Run GG (Config)** — runs the file's sibling `.gg.yaml` config directly, no profile or overrides — the config owns everything.
+  - **Generate config.yaml...** — scaffolds a starter `.gg.yaml` for the file without running anything.
+- **Gutter run icon** on `.gg.yaml` files:
+  - **Run GG** — prompts for optional snapshot recording (with a tag), then runs the config as-is.
+- The same actions are available from the right-click **Gopher Glide (GG)** menu in the Project View, Editor, and Editor Tab popups, grouped into **Run**, **Generate**, and **CI** sections.
+- Runs always go through the native run dashboard below — there's no interactive terminal TUI launch path, which avoids a CPU-pinning redraw-rate issue in gg's TUI that could otherwise freeze or crash the IDE.
 
-### 🖥 Native run panel
+### 🖥 Native run dashboard
 
-Runs default to a lightweight **Run** tab in the Gopher Glide tool window instead of rendering gg's interactive terminal UI inside the IDE — avoiding the CPU overhead of a full TUI redraw loop. While a simulation runs, it shows live:
+The **Run** tab in the Gopher Glide tool window shows live, updating roughly once per heartbeat:
 
-- Current stage, elapsed time, and overall status
-- Target vs. actual RPS, error rate, total requests
+- Current status and elapsed time
+- Target vs. actual RPS, error rate, and total requests (metric cards)
 - p50 / p95 / p99 latency
-- A sparkline of recent RPS history
-- A **Stop** button to cancel the run cleanly
-
-Prefer gg's full interactive TUI — for example, for live arrow-key RPS control? Use **Run in Terminal (Interactive)** instead; it's always one click away.
+- A scaled **RPS chart** and a **stage timeline** showing progress through the simulation's stages
+- A **Stop** toolbar button to cancel the run cleanly
 
 ### 📸 Snapshot recording
 
-- **Run && Record** executes a traffic simulation and records a performance snapshot in one step.
-- Prompts for an optional tag so snapshots are easy to identify later.
-- Available for both `.gg.yaml` and `.http` files via gutter icons and the context menu.
+Recording is a checkbox inside the same run flow, not a separate action — tick **Record a snapshot** (with an optional tag) in the run dialog/profile picker and a performance snapshot is saved automatically alongside the run.
 
 ### 🗂 Gopher Glide tool window
 
 A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
 
-- **Run** — the native run panel described above.
+- **Run** — the native run dashboard described above.
 - **Snaps** — lists all recorded snapshots:
 
 | Column | Description |
@@ -52,12 +50,26 @@ A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
 | Total Requests | Aggregate request count |
 | Peak RPS | Peak requests-per-second recorded |
 
-Toolbar actions inside the Snaps tab:
+Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to a terminal:
 
 - **Refresh** — reload the snapshot list from disk.
-- **View Detail** — stream the full snapshot report in the terminal (select one row).
-- **Compare (Diff)** — diff two snapshots side-by-side in the terminal (select exactly two rows).
-- **Double-click** a row to view its details instantly.
+- **View Detail** — inspect a snapshot's latency, status distribution, and inferred response schema (select one row, or double-click).
+- **Compare (Diff)** — diff two snapshots side-by-side (select exactly two rows).
+- **Assert...** — run `gg snap assert` between any two snapshots and see a pass/fail breakdown against configurable latency/error-rate/payload-size regression thresholds.
+- **Prune...** — delete old snapshots by ID(s), tag, keep-last count, or age, with a dry-run preview before anything is actually deleted.
+
+### 🚀 One-click CI workflow generator
+
+**Generate CI Workflow...** (Tools menu, or right-click → **Gopher Glide (GG)**) scaffolds a ready-to-run `.github/workflows/gg.yml` implementing the full headless regression-gating loop:
+
+- On push to `main`: run a headless simulation, snapshot it as the baseline, and cache it.
+- On each PR: restore the latest baseline, run and snapshot the PR build, `gg snap assert` against the baseline, and post (or update) a sticky PR comment with the result — failing the job if a regression is detected.
+
+The generated config path is pre-filled from the first `.gg.yaml` found in the project, and you're prompted before it overwrites an existing `gg.yml`.
+
+### 📄 Scaffold a new test file
+
+**File → New → Add GG http file** creates a `.http` file pre-filled with a sample request and a cheat sheet of all built-in gg profiles in a comment header.
 
 ### 🔗 YAML reference navigation
 
@@ -96,7 +108,7 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 | PhpStorm | ✅ |
 | RubyMine | ✅ |
 
-Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON`, `YAML`, and `Terminal` plugins is likely to work.
+Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` and `YAML` plugins is likely to work.
 
 ---
 
@@ -125,23 +137,31 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON`, `
 ### Run a traffic simulation
 
 1. Open a `.gg.yaml` or `.http` file.
-2. Click the **run gutter icon**, or right-click → **Gopher Glide (GG) → Run**.
-3. The simulation runs in the **Gopher Glide → Run** tool window panel, with live metrics.
-4. Want gg's full interactive TUI instead? Use the gutter's **Run in Terminal (Interactive)** action.
+2. Click the **Run GG** gutter icon, or right-click → **Gopher Glide (GG) → Run**.
+3. For `.http` files, pick a profile from the popup (override peak RPS/duration and toggle snapshot recording if you like).
+4. The simulation runs in the **Gopher Glide → Run** tool window panel, with live metrics, an RPS chart, and a stage timeline.
 
-### Run and record a snapshot
+### Record a snapshot while running
 
-1. Open a `.gg.yaml` or `.http` file.
-2. Click the **record gutter icon**, or right-click → **Gopher Glide (GG) → Run && Record**.
-3. Enter an optional tag when prompted.
-4. The simulation runs and a snapshot is saved automatically.
+1. Follow the steps above; in the run dialog/profile picker, tick **Record a snapshot**.
+2. Enter an optional tag when prompted.
+3. The simulation runs and a snapshot is saved automatically.
 
-### View and compare snapshots
+### View, compare, assert, and prune snapshots
 
 1. Open the **Gopher Glide** tool window at the bottom of the IDE and switch to the **Snaps** tab.
 2. Click **Refresh** to load all recorded snapshots.
-3. Select a row and click **View Detail** (or double-click) to inspect results.
-4. Select two rows and click **Compare** to diff them in the terminal.
+3. Select a row and click **View Detail** (or double-click) to inspect latency, status distribution, and schema.
+4. Select two rows and click **Compare** to diff them.
+5. Click **Assert...** to run `gg snap assert` between two snapshots and see a pass/fail breakdown.
+6. Click **Prune...** to delete old snapshots by ID, tag, keep-last count, or age (dry-run preview by default).
+
+### Generate a CI workflow
+
+1. Right-click anywhere in the project (or use **Tools → Generate CI Workflow...**).
+2. Confirm the detected `.gg.yaml` path, or let it fall back to a placeholder you can fill in.
+3. Confirm overwrite if a `.github/workflows/gg.yml` already exists.
+4. Commit the generated workflow — it captures a `main`-branch baseline and asserts every PR's snapshot against it, posting the result as a PR comment.
 
 ### Configure the `gg` executable
 
