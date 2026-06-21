@@ -54,6 +54,7 @@
         <action id="GopherGlide.ViewSnap" class="dev.gopherglide.ggplugin.snap.actions.ViewSnapAction" text="View Snap Details" icon="AllIcons.Actions.PreviewDetails"/>
         <action id="GopherGlide.DiffSnaps" class="dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction" text="Compare Snaps" icon="AllIcons.Actions.Diff"/>
         <action id="GopherGlide.AssertSnaps" class="dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction" text="Assert..." description="Run gg snap assert between two snapshots" icon="AllIcons.RunConfigurations.TestState.Run"/>
+        <action id="GopherGlide.PruneSnaps" class="dev.gopherglide.ggplugin.snap.actions.PruneSnapsAction" text="Prune..." description="Delete snapshots by ID, keep-last, older-than, or tag filter" icon="AllIcons.Actions.GC"/>
         <action id="GopherGlide.StopRun" class="dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction" text="Stop" icon="AllIcons.Actions.Suspend"/>
 
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
