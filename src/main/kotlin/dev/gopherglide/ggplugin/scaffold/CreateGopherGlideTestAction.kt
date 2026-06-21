@@ -19,7 +19,7 @@ import dev.gopherglide.ggplugin.execution.ProfileCatalog
 import dev.gopherglide.ggplugin.execution.ProfileCategory
 
 class CreateGopherGlideTestAction : AnAction(
-    "Gopher-Glide Test",
+    "Add GG http file",
     "Create a new .http file pre-filled with a sample request and the gg profile cheat sheet",
     AllIcons.Actions.AddFile
 ) {
@@ -36,7 +36,7 @@ class CreateGopherGlideTestAction : AnAction(
         val fileName = Messages.showInputDialog(
             project,
             "File name:",
-            "New Gopher-Glide Test",
+            "Add GG http file",
             null,
             DEFAULT_FILE_NAME,
             null

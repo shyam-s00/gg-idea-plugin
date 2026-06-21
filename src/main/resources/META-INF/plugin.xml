@@ -56,26 +56,36 @@
         <action id="GopherGlide.AssertSnaps" class="dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction" text="Assert..." description="Run gg snap assert between two snapshots" icon="AllIcons.RunConfigurations.TestState.Run"/>
         <action id="GopherGlide.PruneSnaps" class="dev.gopherglide.ggplugin.snap.actions.PruneSnapsAction" text="Prune..." description="Delete snapshots by ID, keep-last, older-than, or tag filter" icon="AllIcons.Actions.GC"/>
         <action id="GopherGlide.StopRun" class="dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction" text="Stop" icon="AllIcons.Actions.Suspend"/>
+        <action id="GopherGlide.GenerateCiWorkflow" class="dev.gopherglide.ggplugin.ci.GenerateCiWorkflowAction" text="Generate CI Workflow..." description="Scaffold a .github/workflows/gg.yml that runs gg snap + assert and posts the result as a PR comment" icon="AllIcons.Vcs.Vendors.Github">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
 
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorTabPopupMenu" anchor="last"/>
 
-            <!-- YAML actions -->
+            <!-- Run -->
             <action id="GopherGlide.Run" class="dev.gopherglide.ggplugin.execution.RunGopherGlideAction" text="Run" description="Run this Gopher-Glide config — prompts for an optional snapshot tag first" icon="AllIcons.Actions.Execute"/>
-
-            <!-- HTTP actions -->
             <action id="GopherGlide.RunHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideHttpAction" text="Run" description="Pick one of gg's built-in load profiles and run it against this HTTP file" icon="AllIcons.Actions.Execute"/>
             <action id="GopherGlide.RunConfigHttp" class="dev.gopherglide.ggplugin.execution.RunGopherGlideConfigHttpAction" text="Run (Config)" description="Run this HTTP file's sibling .gg.yaml config directly — no profile or overrides" icon="AllIcons.Actions.Execute"/>
+
+            <separator/>
+
+            <!-- Scaffolding -->
             <action id="GopherGlide.GenerateConfigYamlHttp" class="dev.gopherglide.ggplugin.execution.GenerateConfigYamlHttpAction" text="Generate config.yaml..." description="Scaffold a .gg.yaml config for this HTTP file without running anything" icon="AllIcons.FileTypes.Yaml"/>
+            <reference id="GopherGlide.NewHttpTest"/>
+
+            <separator/>
+
+            <!-- CI -->
+            <reference id="GopherGlide.GenerateCiWorkflow"/>
         </group>
 
         <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
-                text="Gopher-Glide Test" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
+                text="Add GG http file" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
                 icon="AllIcons.Actions.AddFile">
             <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
-            <add-to-group group-id="GopherGlide.Menu" anchor="first"/>
         </action>
     </actions>
 </idea-plugin>
