@@ -22,7 +22,6 @@ dependencies {
 
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.plugins.yaml")
-        bundledPlugin("org.jetbrains.plugins.terminal")
     }
 }
 
@@ -43,6 +42,8 @@ intellijPlatform {
             <li><b>Built-in profile picker</b> — run any <code>.http</code> file against a profile (smoke, load, stress, soak, spike) with zero config, with an override dialog for one-off tweaks.</li>
             <li><b>Richer run dashboard</b> — the native run panel now shows a live stage timeline and RPS chart alongside error rate and latency percentiles.</li>
             <li>Reorganized the right-click "Gopher Glide (GG)" menu into logical groups (Run, Generate, CI) and renamed "Gopher-Glide Test" to "Add GG http file" for clarity.</li>
+            <li>Simplified <code>.http</code>/<code>.gg.yaml</code> run actions down to two clear entry points, <b>"Run GG"</b> and <b>"Run GG (Config)"</b>, replacing the previous set of overlapping run/record actions.</li>
+            <li>Added a <b>"Run panel refresh interval"</b> setting (Settings &rarr; Gopher Glide) to control how often the run dashboard updates.</li>
             </ul>
         """.trimIndent()
     }
