@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.ui.Messages
+import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.snap.AssertResult
 import dev.gopherglide.ggplugin.snap.SnapCliRunner
 import dev.gopherglide.ggplugin.snap.SnapDataManager
@@ -52,12 +53,18 @@ class AssertSnapsAction : AnAction("Assert...", "Run gg snap assert between two 
 
         SnapCliRunner.run(project, args) { output ->
             val result = try {
-                gson.fromJson(output.stdout, AssertResult::class.java)
+                // Gson bypasses Kotlin constructors (allocates via Unsafe), so a JSON key
+                // that's simply absent — e.g. "violations" on a passing assert — comes back
+                // null rather than falling back to the Kotlin default.
+                gson.fromJson(output.stdout, AssertResult::class.java)?.let {
+                    it.copy(violations = it.violations ?: emptyList())
+                }
             } catch (ex: Exception) {
                 null
             }
 
             if (result != null) {
+                GopherGlideNotifications.onSuccessfulAction()
                 SnapAssertResultDialog.show(project, result)
             } else {
                 Messages.showErrorDialog(

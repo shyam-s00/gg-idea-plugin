@@ -1,5 +1,6 @@
 package dev.gopherglide.ggplugin.notifications
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -13,9 +14,46 @@ import dev.gopherglide.ggplugin.settings.GopherGlideSettings
 import java.util.concurrent.CompletableFuture
 
 const val GOPHER_GLIDE_NOTIFICATION_GROUP_ID = "Gopher Glide"
+private const val ACTIONS_BEFORE_RATING_PROMPT = 3
+private const val MARKETPLACE_REVIEWS_URL = "https://plugins.jetbrains.com/plugin/30983-gopher-glide/reviews"
 
 object GopherGlideNotifications {
     private fun group() = NotificationGroupManager.getInstance().getNotificationGroup(GOPHER_GLIDE_NOTIFICATION_GROUP_ID)
+
+    /**
+     * Call once per successfully completed gg action — a traffic simulation run or a `snap assert` —
+     * regardless of whether the run/assert itself passed. Shows a one-time rating prompt at the 3rd.
+     */
+    fun onSuccessfulAction() {
+        val settings = GopherGlideSettings.instance
+        if (settings.dontShowRatingPrompt) return
+        settings.successfulRunCount++
+        if (settings.successfulRunCount >= ACTIONS_BEFORE_RATING_PROMPT) {
+            notifyRatingPrompt()
+        }
+    }
+
+    private fun notifyRatingPrompt() {
+        val notification = group().createNotification(
+            "Enjoying Gopher Glide?",
+            "A quick rating/review on the Marketplace helps a lot.",
+            NotificationType.INFORMATION
+        )
+        notification.addAction(NotificationAction.createSimple("Rate on Marketplace") {
+            notification.expire()
+            GopherGlideSettings.instance.dontShowRatingPrompt = true
+            BrowserUtil.browse(MARKETPLACE_REVIEWS_URL)
+        })
+        notification.addAction(NotificationAction.createSimple("Remind Me Later") {
+            notification.expire()
+            GopherGlideSettings.instance.successfulRunCount = 0
+        })
+        notification.addAction(NotificationAction.createSimple("Don't Ask Again") {
+            notification.expire()
+            GopherGlideSettings.instance.dontShowRatingPrompt = true
+        })
+        notification.notify(null)
+    }
 
     fun notifyBinaryMissing(project: Project) {
         val notification = group().createNotification(

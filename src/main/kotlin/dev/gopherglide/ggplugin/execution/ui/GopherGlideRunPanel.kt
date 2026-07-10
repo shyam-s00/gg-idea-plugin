@@ -4,6 +4,7 @@ import com.intellij.ide.ActivityTracker
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
+import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Font
@@ -166,6 +167,7 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
                 statusLabel.text = "✓ FINISHED — ${message.ifBlank { "Traffic simulation completed" }}"
                 setRunning(false)
                 reachedTerminalState = true
+                GopherGlideNotifications.onSuccessfulAction()
             }
             "interrupted" -> {
                 statusLabel.text = "■ STOPPED — ${message.ifBlank { "Run interrupted" }}"
@@ -200,5 +202,6 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
             statusLabel.text += " — ${stderrTail.lineSequence().first()}"
         }
         reachedTerminalState = true
+        if (exitCode == 0) GopherGlideNotifications.onSuccessfulAction()
     }
 }

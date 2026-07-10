@@ -4,7 +4,7 @@ import dev.gopherglide.ggplugin.snap.EndpointSnap
 import javax.swing.table.AbstractTableModel
 
 class EndpointTableModel(private val endpoints: List<EndpointSnap>) : AbstractTableModel() {
-    private val columns = arrayOf("Endpoint", "Requests", "Error Rate", "P50", "P95", "P99", "Max", "Payload Avg", "Payload P95")
+    private val columns = arrayOf("Endpoint", "Requests", "Error Rate", "P50", "P95", "P99", "Max", "Payload Avg", "Payload P95", "Payload Max")
 
     override fun getRowCount(): Int = endpoints.size
     override fun getColumnCount(): Int = columns.size
@@ -23,6 +23,7 @@ class EndpointTableModel(private val endpoints: List<EndpointSnap>) : AbstractTa
             6 -> "%.1f ms".format(endpoint.latency.max)
             7 -> formatBytes(endpoint.payloadSize.avg)
             8 -> formatBytes(endpoint.payloadSize.p95)
+            9 -> formatBytes(endpoint.payloadSize.max)
             else -> ""
         }
     }

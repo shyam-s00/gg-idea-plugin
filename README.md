@@ -53,8 +53,8 @@ A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
 Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to a terminal:
 
 - **Refresh** — reload the snapshot list from disk.
-- **View Detail** — inspect a snapshot's latency, status distribution, and inferred response schema (select one row, or double-click).
-- **Compare (Diff)** — diff two snapshots side-by-side (select exactly two rows).
+- **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click).
+- **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows).
 - **Assert...** — run `gg snap assert` between any two snapshots and see a pass/fail breakdown against configurable latency/error-rate/payload-size regression thresholds.
 - **Prune...** — delete old snapshots by ID(s), tag, keep-last count, or age, with a dry-run preview before anything is actually deleted.
 
