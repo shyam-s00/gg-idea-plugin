@@ -23,7 +23,9 @@ data class SnapMeta(
     @SerializedName("config_hash")
     val configHash: String = "",
     @SerializedName("snap_settings")
-    val snapSettings: SnapSettings? = null
+    val snapSettings: SnapSettings? = null,
+    @SerializedName("profile_name")
+    val profile: String? = null
 )
 
 data class SnapSettings(

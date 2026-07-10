@@ -13,7 +13,7 @@
         <ul>
         <li><b>One-click runs</b> — execute a traffic simulation, or scaffold a new run config, straight from any <code>.http</code> file or <code>.gg.yaml</code> config via gutter icons or the right-click menu, with a built-in profile picker (smoke, load, stress, soak, spike) for zero-config runs.</li>
         <li><b>Native run dashboard</b> — a dedicated "Gopher Glide" tool window shows a live stage timeline, RPS chart, error rate, and latency percentiles while a simulation runs — no terminal TUI involved.</li>
-        <li><b>Native snapshot workflow</b> — browse, view, and diff gg's semantic JSON snapshots (latency, status distribution, inferred response schemas), run <code>gg snap assert</code> to gate regressions, and prune old snapshots by ID, tag, or age — entirely inside the tool window, no terminal involved.</li>
+        <li><b>Native snapshot workflow</b> — a master-detail Snapshot View and Diff, with an inferred JSON schema tree (real type icons, presence %, stability), a status-code distribution chart, and profile-aware comparisons that warn when two snapshots aren't apples-to-apples. The diff view shows a full schema diff (added/removed/changed fields) alongside delta-formatted endpoint metrics. Run <code>gg snap assert</code> to gate regressions, and prune old snapshots by ID, tag, or age — entirely inside the tool window, no terminal involved.</li>
         <li><b>One-click CI workflow generator</b> — scaffold a ready-to-run GitHub Actions workflow that snaps a headless run, asserts it against your main-branch baseline, and posts the result as a PR comment.</li>
         <li><b>Schema-validated config</b> — JSON Schema completion and validation for <code>.gg.yaml</code> files, covering stages, snapshot tuning, and built-in profiles.</li>
         <li><b>Zero manual setup</b> — the plugin downloads and manages the gg binary for you, with update checks and diagnostics built into Settings &rarr; Gopher Glide.</li>
@@ -61,6 +61,12 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
 
+        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
+                text="Add GG http file" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
+                icon="AllIcons.Actions.AddFile">
+            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
+        </action>
+
         <group id="GopherGlide.Menu" text="Gopher Glide (GG)" popup="true" icon="dev.gopherglide.ggplugin.GopherGlideIcons.SidebarIcon">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
@@ -82,11 +88,5 @@
             <!-- CI -->
             <reference id="GopherGlide.GenerateCiWorkflow"/>
         </group>
-
-        <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
-                text="Add GG http file" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
-                icon="AllIcons.Actions.AddFile">
-            <add-to-group group-id="NewGroup" anchor="after" relative-to-action="NewFile"/>
-        </action>
     </actions>
 </idea-plugin>

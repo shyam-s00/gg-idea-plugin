@@ -14,6 +14,9 @@ class GopherGlideSettings : PersistentStateComponent<GopherGlideSettings> {
     var dontAskForMissingBinary: Boolean = false
     /** Seconds between headless JSON heartbeats. 0 means "unset" — gg's own 5s default applies. */
     var heartbeatIntervalSeconds: Int = 0
+    /** Counts successful runs toward the Marketplace rating prompt; reset by "Remind me later". */
+    var successfulRunCount: Int = 0
+    var dontShowRatingPrompt: Boolean = false
 
     override fun getState(): GopherGlideSettings = this
 

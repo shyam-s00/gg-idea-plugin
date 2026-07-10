@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "5.0.0"
+version = project.findProperty("pluginVersion") ?: "6.0.0"
 
 repositories {
     mavenCentral()
@@ -32,18 +32,15 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <b>A complete, terminal-free Snap workflow, plus a richer run dashboard</b><br>
-            This release rounds the plugin out into a full regression-testing loop you never need to leave the editor for:
+            <b>A completely overhauled Snapshot View and Diff experience</b><br>
+            This release is a full visual and functional rework of the native Snap dialogs, bringing them to parity with (and beyond) what <code>gg</code>'s terminal TUI shows:
             <ul>
-            <li><b>Native snapshot viewer &amp; diff</b> — view a snapshot's latency, status distribution, and inferred schema, or diff two snapshots side-by-side, without dropping into gg's interactive terminal TUI.</li>
-            <li><b>Snap Assert from the IDE</b> — run <code>gg snap assert</code> between any two snapshots and see a pass/fail breakdown in a native dialog.</li>
-            <li><b>Snap Prune from the IDE</b> — clean up old snapshots by ID, tag, keep-last count, or age, with a dry-run preview before anything is deleted.</li>
-            <li><b>One-click CI Workflow Generator</b> — a new "Generate CI Workflow..." action scaffolds a ready-to-run GitHub Actions workflow implementing headless run &rarr; snap &rarr; assert &rarr; PR comment, matching the pattern documented at gopherglide.dev/snap.</li>
-            <li><b>Built-in profile picker</b> — run any <code>.http</code> file against a profile (smoke, load, stress, soak, spike) with zero config, with an override dialog for one-off tweaks.</li>
-            <li><b>Richer run dashboard</b> — the native run panel now shows a live stage timeline and RPS chart alongside error rate and latency percentiles.</li>
-            <li>Reorganized the right-click "Gopher Glide (GG)" menu into logical groups (Run, Generate, CI) and renamed "Gopher-Glide Test" to "Add GG http file" for clarity.</li>
-            <li>Simplified <code>.http</code>/<code>.gg.yaml</code> run actions down to two clear entry points, <b>"Run GG"</b> and <b>"Run GG (Config)"</b>, replacing the previous set of overlapping run/record actions.</li>
-            <li>Added a <b>"Run panel refresh interval"</b> setting (Settings &rarr; Gopher Glide) to control how often the run dashboard updates.</li>
+            <li><b>Snapshot View</b> — a rich metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above an endpoint table with a live-updating detail pane: an inferred JSON schema tree (with real type icons, and object/array/string/number distinctions) and a status-code distribution chart, including a synthetic "connection errors" bucket for failures that never received an HTTP status.</li>
+            <li><b>Snapshot Diff</b> — the compare view gets the same treatment, plus a comparative Baseline/Target header, a mismatch warning banner when the two snapshots used different profiles or configs, and a full <b>schema diff</b> (added/removed/changed fields, colored consistently with the rest of the diff table) alongside a side-by-side status distribution comparison.</li>
+            <li><b>Delta-first diff formatting</b> — endpoint and schema diff cells now show the current value with a ▲/▼ delta instead of a cluttered "before → after" pair, with NEW/GONE/CHANGED tags for added, removed, and modified fields.</li>
+            <li><b>Search and column chooser</b> on both endpoint tables — filter rows live, and show/hide columns (Max Payload, P50/P99, etc.) with your choice remembered across restarts.</li>
+            <li><b>Profile-aware comparisons</b> — snapshots now record which load profile generated them, surfaced in both dialogs and used to detect apples-to-oranges comparisons; legacy snapshots without a profile fall back to comparing config hashes.</li>
+            <li>Fixed a handful of longstanding bugs</li>
             </ul>
         """.trimIndent()
     }
