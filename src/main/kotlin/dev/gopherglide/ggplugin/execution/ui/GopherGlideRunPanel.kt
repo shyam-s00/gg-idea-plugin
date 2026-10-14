@@ -140,6 +140,7 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
 
     /** Must be called on the EDT. */
     fun update(payload: HeartbeatPayload) {
+        if (payload.isCommandError) return // a rejected command never ends the run
         val message = rebrand(payload.message)
         when (payload.event) {
             "started" -> {
@@ -171,6 +172,13 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
             }
             "interrupted" -> {
                 statusLabel.text = "■ STOPPED — ${message.ifBlank { "Run interrupted" }}"
+                setRunning(false)
+                reachedTerminalState = true
+            }
+            "stopped" -> {
+                // The generic completion text would read oddly next to STOPPED, so only a snapshot line is shown.
+                val detail = message.takeUnless { it.startsWith("Traffic simulation completed") }?.takeIf { it.isNotBlank() }
+                statusLabel.text = "■ STOPPED" + (detail?.let { " — $it" } ?: "")
                 setRunning(false)
                 reachedTerminalState = true
             }

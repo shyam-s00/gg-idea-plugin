@@ -46,25 +46,28 @@ object GopherGlideHeadlessRunner {
                 panel.onProcessStarted { handler.destroyProcess() }
             }
 
+            val stdoutLines = OutputLineBuffer()
+            fun dispatch(line: String) {
+                val payload = try {
+                    gson.fromJson(line, HeartbeatPayload::class.java)
+                } catch (e: Exception) {
+                    null // non-JSON noise on stdout — ignore rather than fail the run
+                } ?: return
+                ApplicationManager.getApplication().invokeLater { panel.update(payload) }
+            }
+
             handler.addProcessListener(object : ProcessListener {
                 override fun onTextAvailable(event: ProcessEvent, outputType: Key<*>) {
-                    val line = event.text.trim()
-                    if (line.isEmpty()) return
-
-                    if (outputType !== ProcessOutputTypes.STDOUT) {
-                        stderrTail.append(line).append('\n')
+                    if (outputType === ProcessOutputTypes.STDOUT) {
+                        stdoutLines.append(event.text).forEach(::dispatch)
                         return
                     }
-
-                    val payload = try {
-                        gson.fromJson(line, HeartbeatPayload::class.java)
-                    } catch (e: Exception) {
-                        null // non-JSON noise on stdout — ignore rather than fail the run
-                    } ?: return
-                    ApplicationManager.getApplication().invokeLater { panel.update(payload) }
+                    val line = event.text.trim()
+                    if (line.isNotEmpty()) stderrTail.append(line).append('\n')
                 }
 
                 override fun processTerminated(event: ProcessEvent) {
+                    stdoutLines.flush()?.let(::dispatch)
                     activeHandlers.remove(project)
                     ApplicationManager.getApplication().invokeLater {
                         panel.onProcessTerminated(event.exitCode, stderrTail.toString().trim())
