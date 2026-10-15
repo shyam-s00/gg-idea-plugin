@@ -13,10 +13,8 @@ import javax.swing.table.DefaultTableCellRenderer
 data class ComparativeMetric(val caption: String, val baseline: String, val target: String)
 
 /**
- * Side-by-side Baseline/Target metadata as a real (small, non-scrolling)
- * [JBTable] rather than a hand-laid-out grid — resizable columns and a real
- * [javax.swing.table.JTableHeader] come for free, same lesson as the schema
- * tree/table in Milestone 2.
+ * Side-by-side Baseline/Target metadata in a small [JBTable], which gives resizable columns and a
+ * real table header for free.
  */
 class ComparativeMetricHeaderPanel(metrics: List<ComparativeMetric>) : JPanel(BorderLayout()) {
 

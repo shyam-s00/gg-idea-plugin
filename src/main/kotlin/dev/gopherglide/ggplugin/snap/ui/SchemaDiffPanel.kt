@@ -32,12 +32,8 @@ private const val ROW_HEIGHT = 22
 private const val PRESENCE_DELTA_THRESHOLD = 0.10
 
 /**
- * Baseline/target schema comparison, structured as a diff over the same twin
- * Field-tree + Type/Presence/Stability table from [SchemaTreePanel] (Milestone
- * 2) rather than a literal line-numbered JSON text diff — reusing the tree's
- * alignment/resize handling and the same [DiffCell]/[DiffSeverity] coloring
- * already used by the endpoint diff table, so there's one color language
- * across the whole dialog instead of a second one just for schemas.
+ * Baseline/target schema diff built on the [SchemaTreePanel] field tree and table, using the same
+ * [DiffCell]/[DiffSeverity] coloring as the endpoint diff table.
  */
 class SchemaDiffPanel(schemaA: SchemaSnapshot?, schemaB: SchemaSnapshot?) : JPanel(BorderLayout()) {
 

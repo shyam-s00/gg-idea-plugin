@@ -7,6 +7,7 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import dev.gopherglide.ggplugin.snap.EndpointSnap
+import dev.gopherglide.ggplugin.snap.RunTimeline
 import dev.gopherglide.ggplugin.snap.SnapModel
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -28,7 +29,10 @@ class SnapViewDialog(project: Project, private val snap: SnapModel) : DialogWrap
         val root = JPanel(BorderLayout())
         root.preferredSize = Dimension(900, 560)
 
-        root.add(metaHeader(snap), BorderLayout.NORTH)
+        val top = JPanel(BorderLayout())
+        top.add(metaHeader(snap), BorderLayout.NORTH)
+        RunTimeline.from(snap.meta)?.let { top.add(RunTimelineSection(it), BorderLayout.CENTER) }
+        root.add(top, BorderLayout.NORTH)
 
         val tableModel = EndpointTableModel(snap.endpoints)
         val tablePanel = EndpointTablePanel(tableModel)

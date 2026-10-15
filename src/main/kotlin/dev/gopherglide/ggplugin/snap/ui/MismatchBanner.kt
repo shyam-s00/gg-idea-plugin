@@ -6,15 +6,14 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import dev.gopherglide.ggplugin.snap.SnapModel
 import java.awt.BorderLayout
+import javax.swing.Icon
 import javax.swing.JPanel
 
 /**
- * Yellow warning banner shown when the two snapshots being compared were
- * captured under different profiles (or, for legacy snapshots with no
- * recorded profile, different config hashes) — comparing them can be
- * apples-to-oranges.
+ * Yellow warning shown when the compared snapshots used different profiles (or different config
+ * hashes, for legacy snapshots without a profile), since the comparison may not be like for like.
  */
-class MismatchBanner private constructor(message: String) : JPanel(BorderLayout(JBUI.scale(8), 0)) {
+class MismatchBanner private constructor(message: String, icon: Icon) : JPanel(BorderLayout(JBUI.scale(8), 0)) {
 
     init {
         background = JBColor(0xFFF8DC, 0x5C4A1A)
@@ -22,11 +21,14 @@ class MismatchBanner private constructor(message: String) : JPanel(BorderLayout(
             JBUI.Borders.customLine(JBColor(0xE8D48A, 0x8A6D1F), 0, 0, 1, 0),
             JBUI.Borders.empty(8, 12)
         )
-        add(JBLabel(AllIcons.General.Warning), BorderLayout.WEST)
+        add(JBLabel(icon), BorderLayout.WEST)
         add(JBLabel("<html>$message</html>"), BorderLayout.CENTER)
     }
 
     companion object {
+        /** The same banner with an information icon, for notices that are not mismatches. */
+        fun notice(message: String) = MismatchBanner(message, AllIcons.General.Information)
+
         /** Returns null (no banner) when the two snapshots' configuration is comparable. */
         fun forSnaps(snapA: SnapModel, snapB: SnapModel): MismatchBanner? {
             val profileA = snapA.meta?.profile?.ifBlank { null }
@@ -51,7 +53,7 @@ class MismatchBanner private constructor(message: String) : JPanel(BorderLayout(
                 }
             }
 
-            return message?.let { MismatchBanner(it) }
+            return message?.let { MismatchBanner(it, AllIcons.General.Warning) }
         }
     }
 }

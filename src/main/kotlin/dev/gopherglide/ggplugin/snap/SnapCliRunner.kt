@@ -11,10 +11,8 @@ import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.services.BinaryManager
 
 /**
- * Runs a non-streaming `gg snap <subcommand>` to completion and hands back its captured
- * stdout/stderr/exit code — for one-shot commands (assert, prune) that return a single report
- * rather than a live render loop, so there's no need for [GopherGlideHeadlessRunner]'s heartbeat
- * parsing or a terminal widget.
+ * Runs a one-shot `gg snap <subcommand>` (assert, prune) to completion and returns its captured
+ * stdout, stderr and exit code.
  */
 object SnapCliRunner {
     private val log = Logger.getInstance(SnapCliRunner::class.java)

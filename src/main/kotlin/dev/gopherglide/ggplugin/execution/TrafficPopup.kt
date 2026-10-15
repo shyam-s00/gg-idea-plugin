@@ -9,10 +9,9 @@ import com.intellij.util.ui.FormBuilder
 import javax.swing.JComponent
 
 /**
- * Single dialog for the profile-driven "Run GG" flow: lets the user override a profile's
- * `--peak-rps`/`--duration` (pre-filled with the profile's own defaults — leaving a field
- * unchanged means no override flag is added), and optionally record a snapshot (shared
- * [SnapOptionsPanel]).
+ * Dialog for the profile-driven "Run GG" flow: optional `--peak-rps`/`--duration` overrides
+ * (pre-filled with the profile defaults; an unchanged field adds no flag) and an optional snapshot
+ * via the shared [SnapOptionsPanel].
  */
 class TrafficPopup(project: Project, private val profile: GgProfile) : DialogWrapper(project) {
     private val peakRpsField = JBTextField(profile.defaultPeakRps.toString())

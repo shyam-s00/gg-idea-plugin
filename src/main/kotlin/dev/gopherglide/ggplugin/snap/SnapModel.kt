@@ -25,7 +25,25 @@ data class SnapMeta(
     @SerializedName("snap_settings")
     val snapSettings: SnapSettings? = null,
     @SerializedName("profile_name")
-    val profile: String? = null
+    val profile: String? = null,
+    @SerializedName("final_bias")
+    val finalBias: Int? = null,
+    val marks: List<SnapMark>? = null,
+    @SerializedName("bias_events")
+    val biasEvents: List<SnapBiasEvent>? = null
+)
+
+data class SnapMark(
+    val label: String = "",
+    @SerializedName("elapsed_s")
+    val elapsedSeconds: Double = 0.0
+)
+
+data class SnapBiasEvent(
+    val amount: Int = 0,
+    val cumulative: Int = 0,
+    @SerializedName("elapsed_s")
+    val elapsedSeconds: Double = 0.0
 )
 
 data class SnapSettings(

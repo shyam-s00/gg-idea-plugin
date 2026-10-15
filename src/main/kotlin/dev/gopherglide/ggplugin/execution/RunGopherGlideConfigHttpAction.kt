@@ -9,10 +9,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
 /**
- * Config-driven counterpart to [RunGopherGlideHttpAction]: visible only when the `.http` file has
- * a sibling `.gg.yaml`. No profile/rps/duration fields — the config is the single source of truth
- * for everything except whether to snapshot, which is a CLI-only flag with no `config.yaml` field
- * to carry it (hence the shared [SnapOptionsDialog]).
+ * Config-driven counterpart to [RunGopherGlideHttpAction], shown only when the `.http` file has a
+ * sibling `.gg.yaml`. The config drives everything except snapshotting, a CLI-only flag, which is
+ * why it uses the shared [SnapOptionsDialog].
  */
 private fun siblingYaml(httpFile: VirtualFile): VirtualFile? =
     httpFile.parent?.children?.firstOrNull { it.name.endsWith(".gg.yaml") }

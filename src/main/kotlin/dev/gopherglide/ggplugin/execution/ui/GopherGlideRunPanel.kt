@@ -4,6 +4,9 @@ import com.intellij.ide.ActivityTracker
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
+import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
+import dev.gopherglide.ggplugin.execution.control.RunControls
+import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import java.awt.BorderLayout
 import java.awt.Color
@@ -64,8 +67,12 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     private var runStartMs = 0L
     private var reachedTerminalState = false
     private var currentProfile: String? = null
-    private var stopCallback: (() -> Unit)? = null
+    private var controls: RunControls? = null
+    private val annotations = mutableListOf<RunAnnotation>()
+    private val liveControl = LiveControlPanel(::runElapsedSeconds, ::addAnnotation)
     private var running = false
+    private var stopPhase = StopPhase.NONE
+    private var stoppedByRequest = false
 
     init {
         border = BorderFactory.createEmptyBorder(10, 10, 10, 10)
@@ -88,6 +95,7 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
         val header = JPanel(BorderLayout())
         header.add(statusRow, BorderLayout.NORTH)
         header.add(cardsRow, BorderLayout.CENTER)
+        header.add(liveControl, BorderLayout.SOUTH)
         add(header, BorderLayout.NORTH)
 
         val center = JPanel(BorderLayout())
@@ -99,10 +107,13 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
 
     /** Call before starting a new process — clears prior run's state. */
     fun reset() {
-        runStartMs = System.currentTimeMillis()
+        runStartMs = 0L
+        annotations.clear()
         reachedTerminalState = false
+        stoppedByRequest = false
         currentProfile = null
         setRunning(false)
+        liveControl.reset()
         statusLabel.text = "Starting…"
         elapsedLabel.text = "00:00"
         targetRpsCard.value = "—"
@@ -118,14 +129,26 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     /** True while a process is running and Stop should be enabled. Read by [StopGopherGlideRunAction]. */
     fun isRunning(): Boolean = running
 
-    /** Invokes the callback registered by [onProcessStarted], if any. Called by [StopGopherGlideRunAction]. */
+    /** True once a stop was requested and the run has not ended yet: the Stop action then reads Force Stop. */
+    fun isStopping(): Boolean = running && stopPhase != StopPhase.NONE
+
+    /** Asks the process registered by [onProcessStarted] to stop. Called by [StopGopherGlideRunAction]. */
     fun stop() {
-        stopCallback?.invoke()
+        controls?.requestStop()
     }
 
-    fun onProcessStarted(onStop: () -> Unit) {
-        stopCallback = onStop
+    fun onProcessStarted(controls: RunControls) {
+        this.controls = controls
+        liveControl.bind(controls)
         setRunning(true)
+    }
+
+    private fun runElapsedSeconds(): Double =
+        if (runStartMs == 0L) 0.0 else (System.currentTimeMillis() - runStartMs) / 1000.0
+
+    private fun addAnnotation(annotation: RunAnnotation) {
+        annotations.add(annotation)
+        rpsChart.setAnnotations(annotations)
     }
 
     /**
@@ -135,6 +158,25 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
      */
     private fun setRunning(value: Boolean) {
         running = value
+        if (!value) {
+            stopPhase = StopPhase.NONE
+            liveControl.onEnded()
+        }
+        ActivityTracker.getInstance().inc()
+    }
+
+    /** Must be called on the EDT. Reflects how far a requested stop has got. */
+    fun showStopPhase(phase: StopPhase) {
+        if (!running) return
+        stopPhase = phase
+        liveControl.onStopRequested()
+        statusLabel.text = when (phase) {
+            StopPhase.AWAITING_ACK -> "■ Stopping…"
+            StopPhase.FINALIZING -> "■ Stopping — saving snapshot…"
+            StopPhase.INTERRUPTING -> "■ Stopping — interrupting…"
+            StopPhase.NO_ACK_INTERRUPTING -> "■ Stopping — gg did not respond, interrupting…"
+            StopPhase.NONE -> statusLabel.text
+        }
         ActivityTracker.getInstance().inc()
     }
 
@@ -144,6 +186,8 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
         val message = rebrand(payload.message)
         when (payload.event) {
             "started" -> {
+                runStartMs = System.currentTimeMillis()
+                liveControl.onStarted(payload.capabilities)
                 currentProfile = payload.profile?.takeIf { it.isNotBlank() }
                 stageTimeline.setStages(payload.stages)
                 rpsChart.setKnownPeakRps(payload.stages?.maxOfOrNull { it.targetRps })
@@ -151,9 +195,11 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
                 statusLabel.text = "● RUNNING — ${message.ifBlank { "Traffic simulation started" }}"
             }
             "heartbeat" -> {
-                val elapsedSec = (System.currentTimeMillis() - runStartMs) / 1000
+                val elapsedSec = runElapsedSeconds().toLong()
                 val profileSuffix = currentProfile?.let { " — profile: $it" } ?: ""
-                statusLabel.text = "● RUNNING — stage ${payload.stage}/${payload.totalStages}$profileSuffix"
+                if (stopPhase == StopPhase.NONE) {
+                    statusLabel.text = "● RUNNING — stage ${payload.stage}/${payload.totalStages}$profileSuffix"
+                }
                 elapsedLabel.text = "%02d:%02d".format(elapsedSec / 60, elapsedSec % 60)
                 targetRpsCard.value = "${payload.targetRps} rps"
                 actualRpsCard.value = "%.1f rps".format(payload.actualRps)
@@ -163,17 +209,21 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
                 latencyCard.value = "%.1f / %.1f / %.1f".format(payload.p50Ms, payload.p95Ms, payload.p99Ms)
                 rpsChart.addDataPoint(elapsedSec.toDouble(), payload.actualRps, payload.targetRps)
                 stageTimeline.update(payload.stage, payload.totalStages, elapsedSec.toDouble())
+                payload.bias?.let(liveControl::onHeartbeat)
             }
             "finished" -> {
-                statusLabel.text = "✓ FINISHED — ${message.ifBlank { "Traffic simulation completed" }}"
                 setRunning(false)
                 reachedTerminalState = true
-                GopherGlideNotifications.onSuccessfulAction()
+                if (!stoppedByRequest) {
+                    statusLabel.text = "✓ FINISHED — ${message.ifBlank { "Traffic simulation completed" }}"
+                    GopherGlideNotifications.onSuccessfulAction()
+                }
             }
             "interrupted" -> {
                 statusLabel.text = "■ STOPPED — ${message.ifBlank { "Run interrupted" }}"
                 setRunning(false)
                 reachedTerminalState = true
+                stoppedByRequest = true
             }
             "stopped" -> {
                 // The generic completion text would read oddly next to STOPPED, so only a snapshot line is shown.
@@ -181,6 +231,7 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
                 statusLabel.text = "■ STOPPED" + (detail?.let { " — $it" } ?: "")
                 setRunning(false)
                 reachedTerminalState = true
+                stoppedByRequest = true
             }
             "snap" -> statusLabel.text = "● RUNNING — $message"
             "error" -> {

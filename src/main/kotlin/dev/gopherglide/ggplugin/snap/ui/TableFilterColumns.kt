@@ -21,15 +21,9 @@ import javax.swing.table.TableModel
 import javax.swing.table.TableRowSorter
 
 /**
- * Wraps [table] with a search box (filters across all columns) and a
- * column-chooser popup, and returns the assembled panel (toolbar + scrollable
- * table) to place directly in a container. Shared by [EndpointTablePanel] and
- * the diff endpoint table — both have too many columns to show comfortably
- * at once.
- *
- * Column visibility is persisted (application-level, via [PropertiesComponent])
- * under [storageKey], keyed by column *name* rather than index so a future
- * reordering/insertion of columns doesn't silently restore the wrong ones.
+ * Wraps [table] with a search box and a column-chooser popup, returning the toolbar plus a
+ * scrollable table. Column visibility is persisted under [storageKey] by column name, not index,
+ * so reordering columns can't restore the wrong ones.
  */
 fun buildFilterableColumnTable(
     table: JBTable,
