@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "meta": {
+    "tag": "legacy-fixture",
+    "profile_name": "smoke",
+    "profile_scale": 1,
+    "start_time": "2026-10-13T23:11:06.446246-03:00",
+    "end_time": "2026-10-13T23:11:12.449963-03:00",
+    "peak_rps": 10,
+    "total_requests": 70,
+    "config_hash": "sha256:1a721e953cea3edef3b013c4fa7a14176ea60b401026621b12e628bc18cf0c35",
+    "snap_settings": {
+      "sample_rate": 0.05,
+      "max_samples": 200,
+      "max_body_kb": 0
+    }
+  },
+  "endpoints": [
+    {
+      "id": "GET:http://127.0.0.1:18099/api/products",
+      "status_dist": {
+        "200": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "payload_size": {
+        "avg": 42,
+        "p95": 42,
+        "max": 42
+      },
+      "error_rate": 0,
+      "request_count": 70,
+      "body_samples_observed": 3,
+      "body_samples_stored": 3,
+      "schema": {
+        "sample_count": 3,
+        "fields": {
+          "id": {
+            "type": "number",
+            "presence": 1,
+            "stability": "STABLE"
+          },
+          "name": {
+            "type": "string",
+            "presence": 1,
+            "stability": "STABLE"
+          },
+          "price": {
+            "type": "number",
+            "presence": 1,
+            "stability": "STABLE"
+          }
+        }
+      }
+    }
+  ]
+}

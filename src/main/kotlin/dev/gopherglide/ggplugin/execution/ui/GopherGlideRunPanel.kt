@@ -5,6 +5,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
+import dev.gopherglide.ggplugin.execution.control.BinaryActions
 import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
@@ -54,7 +55,7 @@ private class MetricCard(caption: String) : JPanel() {
  * Run dashboard: status header + a horizontal row of metric cards + a scaled RPS chart + a stage
  * timeline, updated once per heartbeat (~5s by default).
  */
-class GopherGlideRunPanel : JPanel(BorderLayout()) {
+class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : JPanel(BorderLayout()) {
     private val statusLabel = JBLabel("Idle")
     private val elapsedLabel = JBLabel("00:00")
     private val targetRpsCard = MetricCard("TARGET RPS")
@@ -69,7 +70,7 @@ class GopherGlideRunPanel : JPanel(BorderLayout()) {
     private var currentProfile: String? = null
     private var controls: RunControls? = null
     private val annotations = mutableListOf<RunAnnotation>()
-    private val liveControl = LiveControlPanel(::runElapsedSeconds, ::addAnnotation)
+    private val liveControl = LiveControlPanel(::runElapsedSeconds, ::addAnnotation, binaryActions = binaryActions)
     private var running = false
     private var stopPhase = StopPhase.NONE
     private var stoppedByRequest = false

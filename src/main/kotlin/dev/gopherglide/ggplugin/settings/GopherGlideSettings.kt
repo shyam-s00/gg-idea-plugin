@@ -17,6 +17,10 @@ class GopherGlideSettings : PersistentStateComponent<GopherGlideSettings> {
     /** Counts successful runs toward the Marketplace rating prompt; reset by "Remind me later". */
     var successfulRunCount: Int = 0
     var dontShowRatingPrompt: Boolean = false
+    var checkForUpdatesOnStartup: Boolean = true
+    var lastUpdateCheckMillis: Long = 0L
+    /** A release tag the user chose to ignore; a newer one is offered again. */
+    var skippedGgVersion: String = ""
 
     override fun getState(): GopherGlideSettings = this
 

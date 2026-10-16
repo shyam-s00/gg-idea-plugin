@@ -59,31 +59,4 @@ class AnnotationLayoutTest {
         assertEquals(listOf(null, null), AnnotationLayout.assignRows(listOf(LabelSpan(0, 10), LabelSpan(50, 10)), rows = 0))
     }
 
-    @Test
-    fun axisTicksAreRoundAndStartAtZero() {
-        assertEquals(listOf(0.0, 30.0, 60.0, 90.0, 120.0, 150.0), AnnotationLayout.axisTicks(150.0))
-        assertEquals(listOf(0.0, 5.0, 10.0), AnnotationLayout.axisTicks(14.04))
-    }
-
-    @Test
-    fun axisTicksStayWithinTheLimitForLongRuns() {
-        assertEquals(true, AnnotationLayout.axisTicks(7200.0).size <= 8)
-        assertEquals(true, AnnotationLayout.axisTicks(3.0, maxTicks = 3).size <= 3)
-    }
-
-    @Test
-    fun thinLabelsKeepsTheFirstAndDropsThoseTooClose() {
-        assertEquals(listOf(true, false, true, false, true), AnnotationLayout.thinLabels(listOf(0, 10, 30, 40, 70), minGap = 26))
-    }
-
-    @Test
-    fun thinLabelsKeepsEverythingThatIsFarEnoughApart() {
-        assertEquals(listOf(true, true, true), AnnotationLayout.thinLabels(listOf(0, 50, 100), minGap = 26))
-    }
-
-    @Test
-    fun manyCrowdedLabelsLeaveOnlyAWellSpacedSubset() {
-        val kept = AnnotationLayout.thinLabels((0 until 60).map { it * 3 }, minGap = 26).count { it }
-        assertEquals(true, kept in 5..8)
-    }
 }

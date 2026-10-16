@@ -12,7 +12,7 @@ class HeartbeatPayloadParsingTest {
     private val gson = Gson()
 
     private fun lines(name: String): List<String> =
-        checkNotNull(javaClass.getResourceAsStream("/lcp/$name")) { "missing fixture $name" }
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/$name")) { "missing fixture $name" }
             .bufferedReader().use { it.readLines() }.filter { it.isNotBlank() }
 
     private fun payloads(name: String): List<HeartbeatPayload> =

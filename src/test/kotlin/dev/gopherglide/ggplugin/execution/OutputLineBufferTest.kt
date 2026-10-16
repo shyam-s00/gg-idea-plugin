@@ -57,7 +57,7 @@ class OutputLineBufferTest {
 
     @Test
     fun anyChunkSizeYieldsTheSameLinesAsOneBigChunk() {
-        val text = checkNotNull(javaClass.getResourceAsStream("/lcp/stream-v130-control.ndjson")).bufferedReader().readText()
+        val text = checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v130-control.ndjson")).bufferedReader().readText()
         val whole = OutputLineBuffer().append(text)
         for (size in listOf(1, 3, 7, 64, 500)) {
             val buffer = OutputLineBuffer()

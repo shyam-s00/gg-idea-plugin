@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "meta": {
+    "tag": "lcp-fixture",
+    "profile_name": "smoke",
+    "profile_scale": 1,
+    "start_time": "2026-10-13T23:10:12.886111-03:00",
+    "end_time": "2026-10-13T23:10:26.930574-03:00",
+    "peak_rps": 10,
+    "total_requests": 318,
+    "config_hash": "sha256:755cb7942dcea00497df1b7ce19b50776027c2725109e873e5439b1fb669f74e",
+    "snap_settings": {
+      "sample_rate": 0.05,
+      "max_samples": 200,
+      "max_body_kb": 0
+    },
+    "final_bias": 15,
+    "marks": [
+      {
+        "label": "cache-warm",
+        "elapsed_s": 6.013390542
+      },
+      {
+        "label": "canary-deploy",
+        "elapsed_s": 11.036139417
+      }
+    ],
+    "bias_events": [
+      {
+        "amount": 10,
+        "cumulative": 10,
+        "elapsed_s": 2.997236833
+      },
+      {
+        "amount": 10,
+        "cumulative": 20,
+        "elapsed_s": 5.003876208
+      },
+      {
+        "amount": -5,
+        "cumulative": 15,
+        "elapsed_s": 8.022737458
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "id": "GET:http://127.0.0.1:18099/api/products",
+      "status_dist": {
+        "200": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "payload_size": {
+        "avg": 42,
+        "p95": 42,
+        "max": 42
+      },
+      "error_rate": 0,
+      "request_count": 318,
+      "body_samples_observed": 15,
+      "body_samples_stored": 15,
+      "schema": {
+        "sample_count": 15,
+        "fields": {
+          "id": {
+            "type": "number",
+            "presence": 1,
+            "stability": "STABLE"
+          },
+          "name": {
+            "type": "string",
+            "presence": 1,
+            "stability": "STABLE"
+          },
+          "price": {
+            "type": "number",
+            "presence": 1,
+            "stability": "STABLE"
+          }
+        }
+      }
+    }
+  ]
+}

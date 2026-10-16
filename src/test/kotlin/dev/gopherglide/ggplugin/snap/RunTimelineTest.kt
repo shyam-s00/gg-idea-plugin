@@ -11,7 +11,7 @@ class RunTimelineTest {
     private val gson = Gson()
 
     private fun fixture(name: String): SnapModel =
-        gson.fromJson(checkNotNull(javaClass.getResourceAsStream("/lcp/$name")).bufferedReader().readText(), SnapModel::class.java)
+        gson.fromJson(checkNotNull(javaClass.getResourceAsStream("/fixtures/$name")).bufferedReader().readText(), SnapModel::class.java)
 
     private fun meta(json: String): SnapMeta = gson.fromJson(json, SnapMeta::class.java)
 
@@ -67,8 +67,11 @@ class RunTimelineTest {
     }
 
     @Test
-    fun noLengthAtAllMeansNoTimeline() {
-        assertNull(RunTimeline.from(meta("""{"marks":[{"label":"a","elapsed_s":0.0}]}""")))
+    fun anEventAtTheVeryStartStillGetsATimelineWithoutALength() {
+        val timeline = RunTimeline.from(meta("""{"marks":[{"label":"a","elapsed_s":0.0}]}"""))!!
+        assertEquals(0.0, timeline.durationSeconds, 0.0)
+        assertNull(timeline.stats())
+        assertEquals("1 mark", timeline.summary())
     }
 
     @Test
@@ -90,22 +93,100 @@ class RunTimelineTest {
     }
 
     @Test
-    fun summaryListsCountsFinalBiasAndLength() {
+    fun summaryListsBiasChangesWithFinalBiasThenMarksThenLength() {
         val timeline = RunTimeline(150.0, List(2) { RunAnnotation.Mark("m", 1.0) }, List(3) { RunAnnotation.BiasChange(5, 5, 1.0) }, 15)
-        assertEquals("2 marks · 3 bias changes · final bias +15 · 2:30 total", timeline.summary())
+        assertEquals("3 bias changes (final +15) · 2 marks · 2:30 run", timeline.summary())
     }
 
     @Test
     fun summaryUsesSingularsAndSkipsWhatIsAbsent() {
-        assertEquals("1 mark · 0:30 total", RunTimeline(30.0, listOf(RunAnnotation.Mark("m", 1.0)), emptyList(), null).summary())
+        assertEquals("1 mark · 0:30 run", RunTimeline(30.0, listOf(RunAnnotation.Mark("m", 1.0)), emptyList(), null).summary())
         assertEquals(
-            "1 bias change · final bias −5 · 1:05 total",
+            "1 bias change (final −5) · 1:05 run",
             RunTimeline(65.0, emptyList(), listOf(RunAnnotation.BiasChange(-5, -5, 1.0)), -5).summary()
         )
+    }
+
+    private fun bias(vararg changes: Triple<Int, Int, Double>) = changes.map { RunAnnotation.BiasChange(it.first, it.second, it.third) }
+
+    private val sample = RunTimeline(
+        150.0,
+        listOf(RunAnnotation.Mark("cache-warm", 18.0), RunAnnotation.Mark("canary-deploy", 58.0)),
+        bias(Triple(10, 10, 44.0), Triple(10, 20, 52.0), Triple(-5, 15, 63.0)),
+        15
+    )
+
+    @Test
+    fun eventsInterleaveMarksAndBiasChangesInTimeOrder() {
+        assertEquals(listOf(18.0, 44.0, 52.0, 58.0, 63.0), sample.events.map { it.elapsedSeconds })
+    }
+
+    @Test
+    fun aMarkSortsBeforeABiasChangeAtTheSameInstant() {
+        val t = RunTimeline(10.0, listOf(RunAnnotation.Mark("m", 5.0)), bias(Triple(5, 5, 5.0)), 5)
+        assertEquals(listOf(true, false), t.events.map { it is RunAnnotation.Mark })
+    }
+
+    @Test
+    fun statsTotalUpTheBiasOverTheRun() {
+        val stats = sample.stats()!!
+        assertEquals(15, stats.finalBias)
+        assertEquals(20, stats.peakBias)
+        assertEquals(52.0, stats.peakAtSeconds, 0.0)
+        assertEquals(44.0, stats.firstChangeSeconds, 0.0)
+        assertEquals(106.0, stats.activeSeconds, 0.0)
+    }
+
+    @Test
+    fun biasReturningToZeroEndsTheActiveTime() {
+        val t = RunTimeline(100.0, emptyList(), bias(Triple(10, 10, 10.0), Triple(-10, 0, 30.0), Triple(5, 5, 60.0)), 5)
+        assertEquals(20.0 + 40.0, t.stats()!!.activeSeconds, 0.0)
+    }
+
+    @Test
+    fun theLargestSwingCountsAsThePeakEvenWhenNegative() {
+        val t = RunTimeline(100.0, emptyList(), bias(Triple(5, 5, 10.0), Triple(-20, -15, 20.0)), -15)
+        assertEquals(-15, t.stats()!!.peakBias)
+        assertEquals(20.0, t.stats()!!.peakAtSeconds, 0.0)
+    }
+
+    @Test
+    fun noBiasChangesMeansNoStats() {
+        assertNull(RunTimeline(100.0, listOf(RunAnnotation.Mark("m", 1.0)), emptyList(), null).stats())
+    }
+
+    @Test
+    fun finalBiasFromTheSnapshotWinsOverTheLastChange() {
+        val t = RunTimeline(100.0, emptyList(), bias(Triple(5, 5, 10.0)), 7)
+        assertEquals(7, t.stats()!!.finalBias)
     }
 
     @Test
     fun timelineExistsForTheRealSnapshot() {
         assertNotNull(RunTimeline.from(fixture("snap-v130-annotated.snap").meta))
+    }
+
+    @Test
+    fun v13SnapshotWithoutEventsSaysNothingWasChanged() {
+        val note = RunTimeline.absenceNote(meta("""{"final_bias":0,"marks":[],"bias_events":[]}"""))
+        assertEquals("No marks or bias changes during this run", note)
+    }
+
+    @Test
+    fun v13SnapshotWithAbsentEventListsStillCountsAsRecorded() {
+        assertEquals("No marks or bias changes during this run", RunTimeline.absenceNote(meta("""{"final_bias":0}""")))
+    }
+
+    @Test
+    fun preV13SnapshotSaysTheEventsWereNotRecorded() {
+        val note = RunTimeline.absenceNote(fixture("snap-v120-plain.snap").meta)
+        assertEquals("Marks and bias changes: not recorded (needs gg v1.3.0+)", note)
+    }
+
+    @Test
+    fun noRowIsShownWhenEventsExistOrThereIsNoMeta() {
+        assertNull(RunTimeline.absenceNote(fixture("snap-v130-annotated.snap").meta))
+        assertNull(RunTimeline.absenceNote(meta("""{"marks":[{"label":"a","elapsed_s":0}]}""")))
+        assertNull(RunTimeline.absenceNote(null))
     }
 }

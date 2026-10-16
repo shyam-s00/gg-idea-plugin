@@ -1,0 +1,4 @@
+gg (Gopher Glide)
+  Version:    v1.2.9-dev
+  Commit:     none
+  Built:      2026-10-14T02:11:12Z

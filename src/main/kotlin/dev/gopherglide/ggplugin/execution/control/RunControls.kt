@@ -13,7 +13,4 @@ interface RunControls {
 
     /** Reads the installed binary and the latest release, for the older-binary notice. */
     fun loadBinaryInfo(onLoaded: (installed: InstalledBinary?, latest: GopherGlideVersion?) -> Unit)
-
-    /** Downloads the latest release; the error is null on success. */
-    fun upgradeBinary(onDone: (error: Throwable?) -> Unit)
 }

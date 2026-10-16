@@ -6,9 +6,11 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextBrowseFolderListener
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.JBIntSpinner
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
 import dev.gopherglide.ggplugin.services.BinaryManager
+import dev.gopherglide.ggplugin.services.BinaryStatus
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.util.concurrent.CompletableFuture
@@ -23,6 +25,7 @@ class GopherGlideConfigurable : Configurable {
     private var binaryPathField: TextFieldWithBrowseButton? = null
     private var snapshotsDirField: TextFieldWithBrowseButton? = null
     private var heartbeatIntervalSpinner: JBIntSpinner? = null
+    private var updateCheckBox: JBCheckBox? = null
 
     override fun getDisplayName(): String = "Gopher Glide"
 
@@ -43,6 +46,9 @@ class GopherGlideConfigurable : Configurable {
 
         val intervalSpinner = JBIntSpinner(0, 0, 60)
         heartbeatIntervalSpinner = intervalSpinner
+
+        val updateBox = JBCheckBox("Check for gg updates on startup")
+        updateCheckBox = updateBox
 
         var statusLabel: JLabel? = null
         var versionLabel: JLabel? = null
@@ -70,6 +76,13 @@ class GopherGlideConfigurable : Configurable {
             }
             row {
                 label("0 = use gg's default (5s). Takes effect on the next run — gg reads this at startup, not live.")
+            }
+
+            row {
+                cell(updateBox)
+            }
+            row {
+                label("At most once a day. Shows a notification when a newer gg release is available.")
             }
 
             row {
@@ -233,7 +246,8 @@ class GopherGlideConfigurable : Configurable {
         val settings = GopherGlideSettings.instance
         return binaryPathField?.text != settings.customBinaryPath ||
                snapshotsDirField?.text != settings.customSnapshotsDir ||
-               heartbeatIntervalSpinner?.number != settings.heartbeatIntervalSeconds
+               heartbeatIntervalSpinner?.number != settings.heartbeatIntervalSeconds ||
+               updateCheckBox?.isSelected != settings.checkForUpdatesOnStartup
     }
 
     override fun apply() {
@@ -241,6 +255,8 @@ class GopherGlideConfigurable : Configurable {
         settings.customBinaryPath = binaryPathField?.text ?: ""
         settings.customSnapshotsDir = snapshotsDirField?.text ?: ""
         settings.heartbeatIntervalSeconds = heartbeatIntervalSpinner?.number ?: 0
+        settings.checkForUpdatesOnStartup = updateCheckBox?.isSelected ?: true
+        BinaryStatus.instance.notifyChanged()
     }
 
     override fun reset() {
@@ -248,6 +264,7 @@ class GopherGlideConfigurable : Configurable {
         binaryPathField?.text = settings.customBinaryPath
         snapshotsDirField?.text = settings.customSnapshotsDir
         heartbeatIntervalSpinner?.number = settings.heartbeatIntervalSeconds
+        updateCheckBox?.isSelected = settings.checkForUpdatesOnStartup
     }
 
     override fun disposeUIResources() {
@@ -255,5 +272,6 @@ class GopherGlideConfigurable : Configurable {
         binaryPathField = null
         snapshotsDirField = null
         heartbeatIntervalSpinner = null
+        updateCheckBox = null
     }
 }

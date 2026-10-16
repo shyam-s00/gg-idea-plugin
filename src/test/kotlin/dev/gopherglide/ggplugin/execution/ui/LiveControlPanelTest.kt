@@ -1,10 +1,12 @@
 package dev.gopherglide.ggplugin.execution.ui
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
+import dev.gopherglide.ggplugin.execution.control.BinaryActions
 import dev.gopherglide.ggplugin.execution.control.ControlReply
 import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.services.GopherGlideVersion
@@ -30,10 +32,24 @@ class LiveControlPanelTest : BasePlatformTestCase() {
             markReplies += onReply
         }
         val infoLoaders = mutableListOf<(InstalledBinary?, GopherGlideVersion?) -> Unit>()
-        val upgrades = mutableListOf<(Throwable?) -> Unit>()
         override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) { infoLoaders += onLoaded }
-        override fun upgradeBinary(onDone: (Throwable?) -> Unit) { upgrades += onDone }
     }
+
+    private class FakeBinaryActions : BinaryActions {
+        val statusLoaders = mutableListOf<(InstalledBinary?, GopherGlideVersion?) -> Unit>()
+        val installs = mutableListOf<(Throwable?) -> Unit>()
+        val listeners = mutableListOf<() -> Unit>()
+        var settingsOpened = 0
+        override fun loadStatus(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) { statusLoaders += onLoaded }
+        override fun install(onDone: (Throwable?) -> Unit) { installs += onDone }
+        override fun openSettings() { settingsOpened++ }
+        override fun onChanged(listener: () -> Unit): () -> Unit {
+            listeners += listener
+            return { listeners -= listener }
+        }
+    }
+
+    private val binary = FakeBinaryActions()
 
     private val all = listOf("control.bias", "control.mark", "control.stop")
     private val annotations = mutableListOf<RunAnnotation>()
@@ -45,7 +61,7 @@ class LiveControlPanelTest : BasePlatformTestCase() {
     private var duringPrompt: () -> Unit = {}
 
     private fun panel(): LiveControlPanel =
-        LiveControlPanel({ clock }, { annotations += it }, { duringPrompt(); nextLabel })
+        LiveControlPanel({ clock }, { annotations += it }, { duringPrompt(); nextLabel }, binary)
 
     private fun active(controls: FakeControls = FakeControls()): Pair<LiveControlPanel, FakeControls> {
         val panel = panel()
@@ -89,7 +105,16 @@ class LiveControlPanelTest : BasePlatformTestCase() {
     private val plugin12 = InstalledBinary("/plugins/gg", GopherGlideVersion(1, 2, 0), InstalledBinary.Source.PLUGIN)
     private val v13 = GopherGlideVersion(1, 3, 0)
 
+    private val system12 = InstalledBinary("/usr/local/bin/gg", GopherGlideVersion(1, 2, 0), InstalledBinary.Source.SYSTEM)
+    private val custom12 = InstalledBinary("/opt/gg", GopherGlideVersion(1, 2, 0), InstalledBinary.Source.CUSTOM)
+    private val system13 = InstalledBinary("/usr/local/bin/gg", v13, InstalledBinary.Source.SYSTEM)
+
     private fun upgradeButton(panel: LiveControlPanel) = button(panel, "Upgrade gg")
+
+    private fun visibleButtons(panel: LiveControlPanel): List<String> =
+        UIUtil.findComponentsOfType(panel, JButton::class.java).filter { shown(panel, it) }.map { it.text.orEmpty() }
+
+    private fun idlePanel(): LiveControlPanel = panel().also { it.addNotify() }
 
     fun testOlderBinaryShowsTheNoticeInsteadOfTheControls() {
         val (panel, _) = older()
@@ -122,12 +147,34 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         assertTrue(upgradeButton(panel).isEnabled)
     }
 
-    fun testUpgradeButtonIsAbsentForACustomBinary() {
+    fun testCustomBinaryGetsAnOpenSettingsButtonAndNoDownload() {
         val (panel, controls) = older()
-        controls.infoLoaders[0](InstalledBinary("/opt/gg", GopherGlideVersion(1, 2, 0), InstalledBinary.Source.CUSTOM), v13)
+        controls.infoLoaders[0](custom12, v13)
         panel.onEnded()
-        assertFalse(shown(panel, upgradeButton(panel)))
+        assertFalse(visibleButtons(panel).any { it.contains("Upgrade") || it.contains("Install") })
         assertTrue(labels(panel).any { it.contains("at /opt/gg") })
+        button(panel, "Open Settings").doClick()
+        assertEquals(1, binary.settingsOpened)
+        assertTrue(binary.installs.isEmpty())
+    }
+
+    fun testSystemBinaryCanBeInstalledEvenWhileTheRunIsActive() {
+        val (panel, controls) = older()
+        controls.infoLoaders[0](system12, v13)
+        val install = button(panel, "Install gg v1.3.0")
+        assertTrue(shown(panel, install))
+        assertTrue(install.isEnabled)
+        install.doClick()
+        assertEquals(1, binary.installs.size)
+    }
+
+    fun testSecondaryOpenSettingsLinkOpensSettings() {
+        val (panel, controls) = older()
+        controls.infoLoaders[0](system12, v13)
+        val link = UIUtil.findComponentsOfType(panel, ActionLink::class.java).first { it.text == "Open Settings" }
+        assertTrue(shown(panel, link))
+        link.doClick()
+        assertEquals(1, binary.settingsOpened)
     }
 
     fun testClickingUpgradeShowsProgressThenTheOutcome() {
@@ -135,12 +182,12 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         controls.infoLoaders[0](plugin12, v13)
         panel.onEnded()
         upgradeButton(panel).doClick()
-        assertEquals(1, controls.upgrades.size)
-        assertFalse(upgradeButton(panel).isEnabled)
+        assertEquals(1, binary.installs.size)
         assertTrue(labels(panel).any { it.endsWith("Upgrading…") })
-        controls.upgrades[0](null)
+        assertFalse(button(panel, "Upgrading…").isEnabled)
+        binary.installs[0](null)
         assertTrue(labels(panel).contains("gg v1.3.0 is installed. Live Control will be available from the next run."))
-        assertFalse(shown(panel, upgradeButton(panel)))
+        assertFalse(visibleButtons(panel).any { it.contains("Upgrade") })
     }
 
     fun testFailedUpgradeShowsWhyAndAllowsAnotherTry() {
@@ -148,9 +195,70 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         controls.infoLoaders[0](plugin12, v13)
         panel.onEnded()
         upgradeButton(panel).doClick()
-        controls.upgrades[0](RuntimeException("no network"))
+        binary.installs[0](RuntimeException("no network"))
         assertTrue(labels(panel).contains("Upgrade failed: no network"))
         assertTrue(upgradeButton(panel).isEnabled)
+    }
+
+    fun testIdlePanelStaysHiddenWhenNothingIsKnownAboutTheBinary() {
+        val panel = idlePanel()
+        assertEquals(1, binary.statusLoaders.size)
+        assertFalse(panel.isVisible)
+        binary.statusLoaders[0](null, v13)
+        assertFalse(panel.isVisible)
+    }
+
+    fun testIdlePanelShowsTheNoticeForAnOlderBinaryBeforeAnyRun() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](system12, v13)
+        assertTrue(panel.isVisible)
+        assertTrue(labels(panel).any { it.contains("Installed: v1.2.0 at /usr/local/bin/gg") })
+        assertTrue(shown(panel, button(panel, "Install gg v1.3.0")))
+        assertFalse(shown(panel, button(panel, "+5")))
+    }
+
+    fun testIdlePanelShowsAQuietLineForACurrentBinary() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](system13, v13)
+        assertTrue(panel.isVisible)
+        assertTrue(labels(panel).contains("Live Control available (gg v1.3.0)"))
+        assertTrue(visibleButtons(panel).none { it.isNotEmpty() })
+    }
+
+    fun testIdleStatusRefreshesWhenTheBinaryChanges() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](system12, v13)
+        binary.listeners.forEach { it() }
+        assertEquals(2, binary.statusLoaders.size)
+        binary.statusLoaders[1](system13, v13)
+        assertTrue(labels(panel).contains("Live Control available (gg v1.3.0)"))
+        assertFalse(labels(panel).any { it.contains("Installed: v1.2.0") })
+    }
+
+    fun testIdleListenerIsRemovedWhenThePanelLeavesTheScreen() {
+        val panel = idlePanel()
+        assertEquals(1, binary.listeners.size)
+        panel.removeNotify()
+        assertTrue(binary.listeners.isEmpty())
+    }
+
+    fun testIdleStatusIsIgnoredOnceARunHasStarted() {
+        val panel = idlePanel()
+        panel.reset()
+        binary.statusLoaders[0](system12, v13)
+        assertFalse(labels(panel).any { it.contains("Installed: v1.2.0") })
+        binary.listeners.forEach { it() }
+        assertEquals(1, binary.statusLoaders.size)
+    }
+
+    fun testInstallFromTheIdleNoticeReloadsTheStatus() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](system12, v13)
+        button(panel, "Install gg v1.3.0").doClick()
+        binary.installs[0](null)
+        binary.listeners.forEach { it() }
+        binary.statusLoaders[1](InstalledBinary("/plugins/gg", v13, InstalledBinary.Source.PLUGIN), v13)
+        assertTrue(labels(panel).contains("Live Control available (gg v1.3.0)"))
     }
 
     fun testBinaryInfoArrivingAfterANewRunStartedIsIgnored() {

@@ -10,7 +10,7 @@ class GopherGlideVersionTest {
     private fun v(text: String) = GopherGlideVersion.parse(text)!!
 
     private fun resource(name: String) =
-        checkNotNull(javaClass.getResourceAsStream("/lcp/$name")).bufferedReader().readText()
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/$name")).bufferedReader().readText()
 
     @Test
     fun parsesTagsAndBareNumbers() {

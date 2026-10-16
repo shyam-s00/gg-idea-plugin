@@ -17,7 +17,7 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
     private fun parse(json: String): HeartbeatPayload = gson.fromJson(json, HeartbeatPayload::class.java)
 
     private fun fixture(event: String, id: String? = null): HeartbeatPayload =
-        checkNotNull(javaClass.getResourceAsStream("/lcp/stream-v130-control.ndjson")).bufferedReader().readLines()
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v130-control.ndjson")).bufferedReader().readLines()
             .filter { it.isNotBlank() }.map(::parse).first { it.event == event && (id == null || it.id == id) }
 
     private val noControls = object : RunControls {
@@ -25,7 +25,6 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
         override fun sendBias(amount: Int, onReply: (ControlReply) -> Unit) {}
         override fun sendMark(label: String, onReply: (ControlReply) -> Unit) {}
         override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) {}
-        override fun upgradeBinary(onDone: (Throwable?) -> Unit) {}
     }
 
     private fun runningPanel() = GopherGlideRunPanel().also { it.onProcessStarted(noControls) }
@@ -68,7 +67,7 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
     }
 
     private fun heartbeat(): HeartbeatPayload =
-        checkNotNull(javaClass.getResourceAsStream("/lcp/stream-v130-natural.ndjson")).bufferedReader().readLines()
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v130-natural.ndjson")).bufferedReader().readLines()
             .filter { it.isNotBlank() }.map(::parse).first { it.event == "heartbeat" }
 
     fun testFinishedAfterInterruptedKeepsTheStoppedStatus() {

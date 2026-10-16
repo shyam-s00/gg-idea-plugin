@@ -16,20 +16,6 @@ object AnnotationLayout {
         return left.coerceAtLeast(minX)
     }
 
-    private val tickSteps = listOf(1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600)
-
-    /** Round tick times from 0 up to [durationSeconds], at most [maxTicks] of them. */
-    fun axisTicks(durationSeconds: Double, maxTicks: Int = 8): List<Double> {
-        val step = tickSteps.firstOrNull { durationSeconds / it <= maxTicks - 1 } ?: tickSteps.last()
-        return generateSequence(0.0) { it + step }.takeWhile { it <= durationSeconds + 1e-9 }.toList()
-    }
-
-    /** Which of the label anchors [xs] (ascending) to draw so that drawn labels stay [minGap] apart. */
-    fun thinLabels(xs: List<Int>, minGap: Int): List<Boolean> {
-        var lastKept = Int.MIN_VALUE / 2
-        return xs.map { x -> (x - lastKept >= minGap).also { if (it) lastKept = x } }
-    }
-
     /**
      * Gives each span, in order, the first of [rows] rows where it stays [gap] clear of the spans
      * already there, or null when every row is taken.

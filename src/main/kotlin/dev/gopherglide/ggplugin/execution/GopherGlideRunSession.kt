@@ -19,8 +19,7 @@ import dev.gopherglide.ggplugin.execution.control.Scheduler
 import dev.gopherglide.ggplugin.execution.control.StopLadder
 import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.execution.ui.GopherGlideRunPanel
-import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
-import dev.gopherglide.ggplugin.services.BinaryManager
+import dev.gopherglide.ggplugin.services.BinaryStatus
 import dev.gopherglide.ggplugin.services.GopherGlideVersion
 import dev.gopherglide.ggplugin.services.InstalledBinary
 import dev.gopherglide.ggplugin.settings.GopherGlideSettings
@@ -132,22 +131,7 @@ class GopherGlideRunSession(
     }
 
     override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) {
-        ApplicationManager.getApplication().executeOnPooledThread {
-            val manager = BinaryManager.instance
-            val installed = manager.installedBinary(binaryPath)
-            val latest = try {
-                GopherGlideVersion.parse(manager.getLatestRemoteVersion().get(15, TimeUnit.SECONDS))
-            } catch (e: Exception) {
-                null
-            }
-            onEdt { onLoaded(installed, latest) }
-        }
-    }
-
-    override fun upgradeBinary(onDone: (Throwable?) -> Unit) {
-        GopherGlideNotifications.downloadWithProgress(project).whenComplete { _, error ->
-            ApplicationManager.getApplication().invokeLater { onDone(error) }
-        }
+        BinaryStatus.instance.loadAsync(binaryPath) { status -> onEdt { onLoaded(status.installed, status.latest) } }
     }
 
     /** Interrupts the process and stops reporting to the panel, for a run that a newer one replaces. */

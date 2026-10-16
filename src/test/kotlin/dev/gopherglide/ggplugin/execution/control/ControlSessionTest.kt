@@ -34,7 +34,7 @@ class ControlSessionTest {
     }
 
     private fun fixture(event: String, id: String): HeartbeatPayload =
-        checkNotNull(javaClass.getResourceAsStream("/lcp/stream-v130-control.ndjson")).bufferedReader().readLines()
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v130-control.ndjson")).bufferedReader().readLines()
             .filter { it.isNotBlank() }.map { gson.fromJson(it, HeartbeatPayload::class.java) }
             .first { it.event == event && it.id == id }
 

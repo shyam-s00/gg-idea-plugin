@@ -27,34 +27,12 @@ private const val REMOTE_VERSION_CACHE_TTL_MS = 15 * 60 * 1000L
 class BinaryManager {
     private val log = Logger.getInstance(BinaryManager::class.java)
 
-    fun resolveBinaryPath(): String? {
-        val customPath = GopherGlideSettings.instance.customBinaryPath
-        if (customPath.isNotBlank()) {
-            val file = File(customPath)
-            if (file.exists() && file.canExecute()) {
-                return customPath
-            }
-        }
-
-        // Check plugin temp path first (managed by plugin)
-        val downloadedBinary = getDownloadedBinaryPath()
-        if (downloadedBinary.exists() && downloadedBinary.canExecute()) {
-            return downloadedBinary.absolutePath
-        }
-
-        // Check PATH
-        val pathEnv = System.getenv("PATH")
-        val binaryName = if (SystemInfo.isWindows) "gg.exe" else "gg"
-
-        pathEnv?.split(File.pathSeparator)?.forEach { dir ->
-            val file = File(dir, binaryName)
-            if (file.exists() && file.canExecute()) {
-                return file.absolutePath
-            }
-        }
-
-        return null
-    }
+    fun resolveBinaryPath(): String? = resolveBinary(
+        customPath = GopherGlideSettings.instance.customBinaryPath,
+        managed = getDownloadedBinaryPath(),
+        pathDirs = System.getenv("PATH")?.split(File.pathSeparator).orEmpty(),
+        binaryName = if (SystemInfo.isWindows) "gg.exe" else "gg"
+    )
 
     internal fun getDownloadedBinaryPath(): File {
         val pluginDir = File(PathManager.getPluginsPath(), "gopher-glide-binary")
@@ -76,6 +54,7 @@ class BinaryManager {
                 }
             } else {
                 log.info("Deleted downloaded binary: ${binaryFile.absolutePath}")
+                BinaryStatus.instance.notifyChanged()
             }
         }
     }
@@ -288,6 +267,7 @@ class BinaryManager {
 
                 log.info("Successfully downloaded and extracted gopher-glide binary to ${destFile.absolutePath}")
                 future.complete(destFile.absolutePath)
+                BinaryStatus.instance.notifyChanged()
             } catch (e: Exception) {
                 log.error("Failed to download gopher-glide binary", e)
                 future.completeExceptionally(e)
@@ -425,5 +405,15 @@ class BinaryManager {
     companion object {
         val instance: BinaryManager
             get() = service()
+
+        /** A usable custom path wins, then the plugin-managed copy, then the first `gg` on PATH. */
+        internal fun resolveBinary(customPath: String, managed: File, pathDirs: List<String>, binaryName: String): String? {
+            if (customPath.isNotBlank()) {
+                val file = File(customPath)
+                if (file.exists() && file.canExecute()) return customPath
+            }
+            if (managed.exists() && managed.canExecute()) return managed.absolutePath
+            return pathDirs.map { File(it, binaryName) }.firstOrNull { it.exists() && it.canExecute() }?.absolutePath
+        }
     }
 }

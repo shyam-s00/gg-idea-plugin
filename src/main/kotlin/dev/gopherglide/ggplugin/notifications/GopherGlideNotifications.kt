@@ -9,6 +9,7 @@ import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.SystemInfo
 import dev.gopherglide.ggplugin.services.BinaryManager
+import dev.gopherglide.ggplugin.services.UpdateOffer
 import dev.gopherglide.ggplugin.settings.GopherGlideConfigurable
 import dev.gopherglide.ggplugin.settings.GopherGlideSettings
 import java.util.concurrent.CompletableFuture
@@ -72,6 +73,27 @@ object GopherGlideNotifications {
         notification.addAction(NotificationAction.createSimple("Don't ask again") {
             notification.expire()
             GopherGlideSettings.instance.dontAskForMissingBinary = true
+        })
+        notification.notify(project)
+    }
+
+    fun notifyUpdateAvailable(project: Project, offer: UpdateOffer) {
+        val notification = group().createNotification(
+            "Gopher Glide ${offer.latest} is available",
+            "You have ${offer.installed}.",
+            NotificationType.INFORMATION
+        )
+        notification.addAction(NotificationAction.createSimple("Update Now") {
+            notification.expire()
+            downloadWithProgress(project)
+        })
+        notification.addAction(NotificationAction.createSimple("Open Settings") {
+            notification.expire()
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, GopherGlideConfigurable::class.java)
+        })
+        notification.addAction(NotificationAction.createSimple("Skip This Version") {
+            notification.expire()
+            GopherGlideSettings.instance.skippedGgVersion = offer.latest.toString()
         })
         notification.notify(project)
     }
