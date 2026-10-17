@@ -9,10 +9,8 @@ import java.awt.RenderingHints
 import javax.swing.JComponent
 
 /**
- * Horizontal progress bar showing all load stages, highlighting the one currently running.
- * Segment widths are proportional to each stage's duration when known (`stages`, from gg's
- * "started" heartbeat); otherwise falls back to `totalStages` equal-width segments highlighting
- * just the current index, since there's no duration to size segments by.
+ * Horizontal bar of all load stages with the running one highlighted. Segments are sized by stage
+ * duration when known, otherwise `totalStages` equal-width segments.
  */
 class StageTimelineComponent : JComponent() {
     private var stages: List<StageInfo> = emptyList()

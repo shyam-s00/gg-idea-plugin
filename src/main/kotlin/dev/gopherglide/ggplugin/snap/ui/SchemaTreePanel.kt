@@ -32,11 +32,9 @@ import javax.swing.tree.DefaultTreeModel
 private const val ROW_HEIGHT = 22
 
 /**
- * Renders an inferred [SchemaSnapshot] as a Field tree (splitting paths like
- * "orders[].orderId" into nested nodes) alongside a real, resizable table for
- * Type / Presence % / Stability. The two are synced row-for-row by index and
- * share one scroll position, so only the Field column shifts with nesting
- * depth — the other columns always line up, and columns are user-resizable.
+ * Renders an inferred [SchemaSnapshot] as a Field tree (paths like "orders[].orderId" become nested
+ * nodes) beside a resizable Type / Presence % / Stability table, synced row for row and sharing one
+ * scroll position.
  */
 class SchemaTreePanel(schema: SchemaSnapshot?) : JPanel(BorderLayout()) {
 
@@ -102,12 +100,7 @@ class SchemaTreePanel(schema: SchemaSnapshot?) : JPanel(BorderLayout()) {
         border = JBUI.Borders.customLine(JBColor.border(), 1)
     }
 
-    /**
-     * A real [JTableHeader] (not a hand-styled label) so the "Field" header
-     * renders pixel-identical to the adjacent Type/Presence/Stability header —
-     * a custom label here previously looked like a disconnected element
-     * floating beside the real table header rather than part of one row.
-     */
+    /** A real [JTableHeader] so the "Field" header matches the adjacent table header exactly. */
     private fun fieldColumnHeader(): JTableHeader {
         val columnModel = DefaultTableColumnModel()
         columnModel.addColumn(TableColumn(0).apply { headerValue = "Field" })
@@ -122,11 +115,8 @@ class SchemaTreePanel(schema: SchemaSnapshot?) : JPanel(BorderLayout()) {
     }
 
     private fun buildTree(parent: DefaultMutableTreeNode, fields: Map<String, FieldSchema>) {
-        // Group field paths (dot/bracket separated) into a tree by shared prefixes.
-        // A path like "metadata" (the object itself, own type/presence/stability)
-        // and "metadata.source" (a child) share the head "metadata" — those must
-        // become one expandable node, not a leaf plus a separate group node for
-        // the same name.
+        // Group dot/bracket paths into a tree by shared prefix. "metadata" and "metadata.source"
+        // share a head and must become one expandable node, not a leaf plus a separate group.
         val childGroups = linkedMapOf<String, MutableMap<String, FieldSchema>>()
         val ownInfo = linkedMapOf<String, FieldSchema>()
 
@@ -170,14 +160,9 @@ private data class SchemaNode(val name: String, val field: FieldSchema?) {
 }
 
 /**
- * Field-column tree renderer: name plus a real platform icon keyed to the
- * JSON type. `AllIcons.Json.Object`/`Array` are core-platform icons (ship
- * with every IDE). String/number use bundled expui icons matching the
- * Database plugin's style (that plugin itself is Ultimate-only and
- * unavailable in Community or GoLand — which this plugin explicitly
- * targets — so the icons are shipped as plugin resources instead of
- * referencing that plugin's classes). Boolean/null share
- * `AllIcons.Debugger.Db_primitive`, since there's no equivalent bundled yet.
+ * Tree renderer showing the field name with an icon for its JSON type. String and number icons ship
+ * as plugin resources because the Database plugin that has them is Ultimate-only; boolean and null
+ * share `AllIcons.Debugger.Db_primitive`.
  */
 private class FieldNodeRenderer : DefaultTreeCellRenderer() {
     override fun getTreeCellRendererComponent(

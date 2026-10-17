@@ -14,7 +14,7 @@ data class StageInfo(
 /** Mirrors the JSON heartbeat shape emitted by `gg --headless --reporter json`. */
 data class HeartbeatPayload(
     val time: String = "",
-    val event: String = "", // "heartbeat" | "started" | "finished" | "snap" | "interrupted" | "error"
+    val event: String = "", // "heartbeat" | "started" | "finished" | "stopped" | "snap" | "interrupted" | "error" | "ack" | "mark"
     val stage: Int = 0,
     @SerializedName("total_stages")
     val totalStages: Int = 0,
@@ -42,5 +42,31 @@ data class HeartbeatPayload(
     val p95Ms: Double = 0.0,
     @SerializedName("p99_ms")
     val p99Ms: Double = 0.0,
-    val message: String = ""
-)
+    val message: String = "",
+    /** Set only on "started", on `gg` v1.3.0+. Null on older binaries. */
+    @SerializedName("protocol_version")
+    val protocolVersion: Int? = null,
+    /** Null on a pre-v1.3 binary; present but empty when live control is disabled for the run. */
+    val capabilities: List<String>? = null,
+    /** Cumulative bias: set on "heartbeat" and bias "ack". Null when absent, so a real 0 is distinguishable. */
+    val bias: Int? = null,
+    /** Correlation fields on "ack", "mark" and command "error" replies. */
+    val id: String? = null,
+    val command: String? = null,
+    val label: String? = null,
+    @SerializedName("elapsed_s")
+    val elapsedSeconds: Double? = null,
+    /** Set only on a command "error" reply; a fatal run "error" has none. */
+    val reason: String? = null
+) {
+    /** True for an "error" reply to a control command, which does not end the run. */
+    val isCommandError: Boolean get() = event == "error" && !reason.isNullOrEmpty()
+
+    /** True when this event means the process is done and no further heartbeats will follow. */
+    val isTerminal: Boolean
+        get() = when (event) {
+            "finished", "stopped", "interrupted" -> true
+            "error" -> !isCommandError
+            else -> false
+        }
+}

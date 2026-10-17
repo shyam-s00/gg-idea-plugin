@@ -15,6 +15,13 @@ class StopGopherGlideRunAction : AnAction("Stop", "Stop the running Gopher Glide
         val project = e.project
         val panel = project?.let { GopherGlideRunToolWindowFactory.getPanel(it) }
         e.presentation.isEnabled = panel?.isRunning() == true
+        if (panel?.isStopping() == true) {
+            e.presentation.text = "Force Stop"
+            e.presentation.description = "End Gopher Glide immediately. The snapshot may be incomplete."
+        } else {
+            e.presentation.text = "Stop"
+            e.presentation.description = "Stop the running Gopher Glide process"
+        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {

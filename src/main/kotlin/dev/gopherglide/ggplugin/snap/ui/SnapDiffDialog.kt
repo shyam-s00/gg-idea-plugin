@@ -12,6 +12,7 @@ import dev.gopherglide.ggplugin.snap.SnapModel
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.Action
+import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -30,7 +31,12 @@ class SnapDiffDialog(project: Project, private val snapA: SnapModel, private val
         root.preferredSize = Dimension(960, 600)
 
         val top = JPanel(BorderLayout())
-        MismatchBanner.forSnaps(snapA, snapB)?.let { top.add(it, BorderLayout.NORTH) }
+        val banners = listOfNotNull(MismatchBanner.forSnaps(snapA, snapB), ManualChangesBanner.forSnaps(snapA, snapB))
+        if (banners.isNotEmpty()) {
+            val stack = JPanel().apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+            banners.forEach { stack.add(it) }
+            top.add(stack, BorderLayout.NORTH)
+        }
         top.add(comparativeHeader(snapA, snapB), BorderLayout.CENTER)
         root.add(top, BorderLayout.NORTH)
 

@@ -1,11 +1,9 @@
 package dev.gopherglide.ggplugin.ci
 
 /**
- * Bundled `.github/workflows/gg.yml` template — implements the headless run -> snap -> assert ->
- * PR-comment pattern documented at https://gopherglide.dev/snap.
- *
- * Adjust the trigger branch and the "Start the application under test" steps to match your project;
- * everything else works out of the box against the latest gg release.
+ * Bundled `.github/workflows/gg.yml` template: headless run, snap, assert, PR comment
+ * (see https://gopherglide.dev/snap). Adjust the trigger branch and the "Start the application
+ * under test" steps for your project.
  */
 object CiWorkflowTemplate {
     fun render(configPath: String): String = TEMPLATE.replace("{{CONFIG_PATH}}", configPath)

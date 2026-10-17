@@ -16,16 +16,9 @@ private const val CONNECTION_ERRORS_LABEL = "Connection errors"
 private const val CONNECTION_ERRORS_SHORT_LABEL = "ERR"
 
 /**
- * Renders a status-code distribution (e.g. "200" -> 0.572) as a stack of
- * labeled, colored bars — one row per status code, sorted by share descending.
- * Rows are fixed-height and top-anchored so a single status code doesn't
- * stretch to fill all available vertical space.
- *
- * [errorRate] can exceed the sum of 4xx/5xx buckets in [statusDist]: gg's
- * error_rate also counts connection-level failures (timeouts, connection
- * refused, DNS errors) that never receive an HTTP status code, so they'd
- * otherwise vanish from this view entirely. The gap is surfaced as a
- * synthetic "Connection errors" bucket rather than silently dropped.
+ * Status-code distribution as stacked, colored bars sorted by share (fixed-height, top-anchored).
+ * [errorRate] can exceed the 4xx/5xx buckets when requests fail without a status, so the gap is
+ * shown as a synthetic "Connection errors" bucket.
  */
 class StatusDistributionPanel(statusDist: Map<String, Double>, errorRate: Double = 0.0) : JPanel() {
 

@@ -14,16 +14,9 @@ import javax.swing.SwingConstants
 data class Metric(val caption: String, val value: String, val tooltip: String = value)
 
 /**
- * Header strip of stacked "caption above value" metric cells with hairline
- * separators (no card backgrounds — see the flat-row layout chosen over
- * hybrid cards for maintenance/resize).
- *
- * Uses GridBagLayout, not GridLayout: GridLayout forces every cell to the
- * width of the single widest cell in the whole grid, so one long value (e.g.
- * a full timestamp range) drags every other column out with it and pins the
- * dialog's minimum width huge. GridBagLayout sizes each column from only the
- * cells in that column, and `weightx = 1.0` still lets columns share extra
- * width evenly when the dialog is wide.
+ * Header strip of "caption above value" metric cells with hairline separators. Uses GridBagLayout
+ * because GridLayout sizes every cell to the widest one, so one long value would inflate every
+ * column and pin the dialog's minimum width.
  */
 class MetricHeaderPanel(metrics: List<Metric>, columns: Int = 3) : JPanel(BorderLayout()) {
 

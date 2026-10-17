@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "6.0.0"
+version = project.findProperty("pluginVersion") ?: "7.0.0"
 
 repositories {
     mavenCentral()
@@ -23,6 +23,9 @@ dependencies {
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.plugins.yaml")
     }
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.opentest4j:opentest4j:1.3.0")
 }
 
 intellijPlatform {
@@ -32,15 +35,14 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <b>A completely overhauled Snapshot View and Diff experience</b><br>
-            This release is a full visual and functional rework of the native Snap dialogs, bringing them to parity with (and beyond) what <code>gg</code>'s terminal TUI shows:
+            <b>Live control for running simulations (needs gg v1.3.0+)</b><br>
             <ul>
-            <li><b>Snapshot View</b> — a rich metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above an endpoint table with a live-updating detail pane: an inferred JSON schema tree (with real type icons, and object/array/string/number distinctions) and a status-code distribution chart, including a synthetic "connection errors" bucket for failures that never received an HTTP status.</li>
-            <li><b>Snapshot Diff</b> — the compare view gets the same treatment, plus a comparative Baseline/Target header, a mismatch warning banner when the two snapshots used different profiles or configs, and a full <b>schema diff</b> (added/removed/changed fields, colored consistently with the rest of the diff table) alongside a side-by-side status distribution comparison.</li>
-            <li><b>Delta-first diff formatting</b> — endpoint and schema diff cells now show the current value with a ▲/▼ delta instead of a cluttered "before → after" pair, with NEW/GONE/CHANGED tags for added, removed, and modified fields.</li>
-            <li><b>Search and column chooser</b> on both endpoint tables — filter rows live, and show/hide columns (Max Payload, P50/P99, etc.) with your choice remembered across restarts.</li>
-            <li><b>Profile-aware comparisons</b> — snapshots now record which load profile generated them, surfaced in both dialogs and used to detect apples-to-oranges comparisons; legacy snapshots without a profile fall back to comparing config hashes.</li>
-            <li>Fixed a handful of longstanding bugs</li>
+            <li><b>Steer a run</b> — raise or lower the target RPS with +5 / +10 / −5 / −10, reset to the plan, and drop named marks, all without stopping the run. Bias changes and marks appear on the RPS chart.</li>
+            <li><b>Stop now keeps the snapshot</b> — gg is asked to stop cleanly and finishes writing the snapshot; if it does not answer, the process is interrupted, and a second click forces it to end.</li>
+            <li><b>Manual changes in Snapshot View</b> — a list of every mark and bias change in time order, with final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshot Diff adds a one-line notice when either run was changed by hand.</li>
+            <li><b>Know your gg before you run</b> — the Run tab shows whether the installed gg supports live control, and offers to install or upgrade it. A startup check (once a day, can be turned off in Settings) tells you when a newer gg is available.</li>
+            <li>Marks are stamped when you confirm the label.</li>
+            <li>Older gg versions keep working as before.</li>
             </ul>
         """.trimIndent()
     }

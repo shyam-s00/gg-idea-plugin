@@ -27,34 +27,12 @@ private const val REMOTE_VERSION_CACHE_TTL_MS = 15 * 60 * 1000L
 class BinaryManager {
     private val log = Logger.getInstance(BinaryManager::class.java)
 
-    fun resolveBinaryPath(): String? {
-        val customPath = GopherGlideSettings.instance.customBinaryPath
-        if (customPath.isNotBlank()) {
-            val file = File(customPath)
-            if (file.exists() && file.canExecute()) {
-                return customPath
-            }
-        }
-
-        // Check plugin temp path first (managed by plugin)
-        val downloadedBinary = getDownloadedBinaryPath()
-        if (downloadedBinary.exists() && downloadedBinary.canExecute()) {
-            return downloadedBinary.absolutePath
-        }
-
-        // Check PATH
-        val pathEnv = System.getenv("PATH")
-        val binaryName = if (SystemInfo.isWindows) "gg.exe" else "gg"
-
-        pathEnv?.split(File.pathSeparator)?.forEach { dir ->
-            val file = File(dir, binaryName)
-            if (file.exists() && file.canExecute()) {
-                return file.absolutePath
-            }
-        }
-
-        return null
-    }
+    fun resolveBinaryPath(): String? = resolveBinary(
+        customPath = GopherGlideSettings.instance.customBinaryPath,
+        managed = getDownloadedBinaryPath(),
+        pathDirs = System.getenv("PATH")?.split(File.pathSeparator).orEmpty(),
+        binaryName = if (SystemInfo.isWindows) "gg.exe" else "gg"
+    )
 
     internal fun getDownloadedBinaryPath(): File {
         val pluginDir = File(PathManager.getPluginsPath(), "gopher-glide-binary")
@@ -76,16 +54,14 @@ class BinaryManager {
                 }
             } else {
                 log.info("Deleted downloaded binary: ${binaryFile.absolutePath}")
+                BinaryStatus.instance.notifyChanged()
             }
         }
     }
 
     /**
-     * Returns a SEP-separated string: `rawVersionOutput \u0001 binaryPath \u0001 sourceTag`
-     * where sourceTag is either "plugin" or "system".
-     *
-     * Using a separator keeps the binary path out of the version-number regex, preventing
-     * false matches when a path component looks like a version (e.g. `/v0.3.0/gg`).
+     * Returns `rawVersionOutput \u0001 binaryPath \u0001 sourceTag` ("plugin" or "system"). The separator
+     * keeps the path out of the version regex, so a path like `/v0.3.0/gg` can't false-match.
      */
     fun getLocalVersion(): CompletableFuture<String?> {
         val future = CompletableFuture<String?>()
@@ -253,10 +229,8 @@ class BinaryManager {
                 if (SystemInfo.isWindows) {
                     destFile.setExecutable(true)
                 } else {
-                    // Use POSIX permissions for reliable executable bit on macOS/Linux.
-                    // File.setExecutable(true) only sets owner-execute and can silently fail on
-                    // some file-systems, causing canExecute() to return false later and
-                    // resolveBinaryPath() to fall through to the (potentially older) system PATH binary.
+                    // POSIX permissions: setExecutable(true) can silently fail on some file systems,
+                    // and resolveBinaryPath() would then fall through to an older PATH binary.
                     try {
                         Files.setPosixFilePermissions(
                             destFile.toPath(),
@@ -293,6 +267,7 @@ class BinaryManager {
 
                 log.info("Successfully downloaded and extracted gopher-glide binary to ${destFile.absolutePath}")
                 future.complete(destFile.absolutePath)
+                BinaryStatus.instance.notifyChanged()
             } catch (e: Exception) {
                 log.error("Failed to download gopher-glide binary", e)
                 future.completeExceptionally(e)
@@ -317,7 +292,6 @@ class BinaryManager {
                 sb.appendLine("Arch      : ${System.getProperty("os.arch")} | isArm64=${CpuArch.isArm64()}")
                 sb.appendLine()
 
-                // --- Plugin-managed binary ---
                 val downloadedBinary = getDownloadedBinaryPath()
                 sb.appendLine("[Plugin-managed binary]")
                 sb.appendLine("  Path      : ${downloadedBinary.absolutePath}")
@@ -328,7 +302,6 @@ class BinaryManager {
                     sb.appendLine("  version   : ${runVersionCommand(downloadedBinary.absolutePath)}")
                 }
 
-                // --- Custom path setting ---
                 sb.appendLine()
                 sb.appendLine("[Custom path setting]")
                 val customPath = GopherGlideSettings.instance.customBinaryPath
@@ -344,7 +317,6 @@ class BinaryManager {
                     }
                 }
 
-                // --- Resolved binary (what the plugin will actually use) ---
                 sb.appendLine()
                 sb.appendLine("[Resolved binary (active)]")
                 val resolved = resolveBinaryPath()
@@ -355,7 +327,6 @@ class BinaryManager {
                     sb.appendLine("  version   : ${runVersionCommand(resolved)}")
                 }
 
-                // --- System PATH scan ---
                 sb.appendLine()
                 sb.appendLine("[System PATH scan]")
                 val binaryName = if (SystemInfo.isWindows) "gg.exe" else "gg"
@@ -387,19 +358,62 @@ class BinaryManager {
 
     private fun runVersionCommand(path: String): String {
         return try {
-            val process = ProcessBuilder(path, "--version")
-                .redirectErrorStream(true)
-                .start()
-            val output = process.inputStream.bufferedReader().readText().trim()
-            process.waitFor()
-            output.ifBlank { "(empty output)" }
+            versionOutput(path).ifBlank { "(empty output)" }
         } catch (e: Exception) {
             "ERROR: ${e.message}"
         }
     }
 
+    private fun versionOutput(path: String): String {
+        val process = ProcessBuilder(path, "--version")
+            .redirectErrorStream(true)
+            .start()
+        val output = process.inputStream.bufferedReader().readText().trim()
+        process.waitFor()
+        return output
+    }
+
+    private val versionCache = BinaryVersionCache(
+        readOutput = { path ->
+            try {
+                versionOutput(path)
+            } catch (e: Exception) {
+                log.warn("Failed to read version of $path", e)
+                null
+            }
+        },
+        stampOf = { path -> File(path).takeIf { it.isFile }?.let { BinaryVersionCache.Stamp(it.lastModified(), it.length()) } }
+    )
+
+    /** Blocking: runs `--version` at most once per unchanged binary. Call off the EDT. */
+    fun installedBinary(path: String): InstalledBinary {
+        val custom = GopherGlideSettings.instance.customBinaryPath
+        val source = when {
+            sameFile(path, getDownloadedBinaryPath().path) -> InstalledBinary.Source.PLUGIN
+            custom.isNotBlank() && sameFile(path, custom) -> InstalledBinary.Source.CUSTOM
+            else -> InstalledBinary.Source.SYSTEM
+        }
+        return InstalledBinary(path, versionCache.versionOf(path), source)
+    }
+
+    private fun sameFile(a: String, b: String): Boolean = try {
+        File(a).canonicalPath == File(b).canonicalPath
+    } catch (e: Exception) {
+        false
+    }
+
     companion object {
         val instance: BinaryManager
             get() = service()
+
+        /** A usable custom path wins, then the plugin-managed copy, then the first `gg` on PATH. */
+        internal fun resolveBinary(customPath: String, managed: File, pathDirs: List<String>, binaryName: String): String? {
+            if (customPath.isNotBlank()) {
+                val file = File(customPath)
+                if (file.exists() && file.canExecute()) return customPath
+            }
+            if (managed.exists() && managed.canExecute()) return managed.absolutePath
+            return pathDirs.map { File(it, binaryName) }.firstOrNull { it.exists() && it.canExecute() }?.absolutePath
+        }
     }
 }
