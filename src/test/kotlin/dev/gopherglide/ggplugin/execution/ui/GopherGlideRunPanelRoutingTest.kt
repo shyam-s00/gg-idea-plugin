@@ -10,6 +10,7 @@ import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.services.GopherGlideVersion
 import dev.gopherglide.ggplugin.services.InstalledBinary
+import javax.swing.JButton
 
 class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
     private val gson = Gson()
@@ -23,7 +24,11 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
     private val noControls = object : RunControls {
         override fun requestStop() {}
         override fun sendBias(amount: Int, onReply: (ControlReply) -> Unit) {}
-        override fun sendMark(label: String, onReply: (ControlReply) -> Unit) {}
+        override fun sendMark(label: String, elapsedSeconds: Double?, onReply: (ControlReply) -> Unit) {}
+        override fun sendHold(rps: Int, onReply: (ControlReply) -> Unit) {}
+        override fun sendRelease(onReply: (ControlReply) -> Unit) {}
+        override fun startAutopilot(mode: String, maxP99Ms: Int?, maxErrorRate: Double?, onReply: (ControlReply) -> Unit) {}
+        override fun stopAutopilot(onReply: (ControlReply) -> Unit) {}
         override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) {}
     }
 
@@ -69,6 +74,120 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
     private fun heartbeat(): HeartbeatPayload =
         checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v130-natural.ndjson")).bufferedReader().readLines()
             .filter { it.isNotBlank() }.map(::parse).first { it.event == "heartbeat" }
+
+    private fun v150(name: String = "stream-v150-autopilot.ndjson"): List<HeartbeatPayload> =
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/$name")).bufferedReader().readLines()
+            .filter { it.isNotBlank() }.map(::parse)
+
+    private fun button(panel: GopherGlideRunPanel, text: String): JButton =
+        UIUtil.findComponentsOfType(panel, JButton::class.java).first { it.text == text }
+
+    fun testHeartbeatElapsedTimeReplacesTheLocalClock() {
+        val panel = runningPanel()
+        panel.update(v150().first { it.event == "started" })
+        panel.update(parse("""{"event":"heartbeat","elapsed_s":423.4,"stage":1,"total_stages":1}"""))
+        assertTrue(labels(panel).contains("07:03"))
+    }
+
+    fun testHeartbeatWithoutElapsedTimeKeepsTheLocalClock() {
+        val panel = runningPanel()
+        panel.update(heartbeat())
+        assertTrue(labels(panel).contains("00:00"))
+    }
+
+    fun testAutopilotInTheStreamLocksAndUnlocksTheBiasSteppers() {
+        val panel = runningPanel()
+        val stream = v150()
+        panel.update(stream.first { it.event == "started" })
+        assertTrue(button(panel, "+5").isEnabled)
+        panel.update(stream.first { it.autopilot != null })
+        assertFalse(button(panel, "+5").isEnabled)
+        panel.update(stream.last { it.event == "autopilot" })
+        panel.update(stream.last { it.event == "heartbeat" })
+        assertTrue(button(panel, "+5").isEnabled)
+    }
+
+    fun testAutopilotEventsDoNotEndTheRun() {
+        val panel = runningPanel()
+        v150("stream-v150-find-ceiling.ndjson").filter { it.event == "autopilot" || it.event == "mark" }.forEach { panel.update(it) }
+        assertTrue(panel.isRunning())
+    }
+
+    private fun strip(panel: GopherGlideRunPanel) = UIUtil.findComponentsOfType(panel, ErrorMixStrip::class.java).single()
+
+    private fun tooltips(panel: GopherGlideRunPanel) =
+        UIUtil.findComponentsOfType(panel, javax.swing.JComponent::class.java).mapNotNull { it.toolTipText }
+
+    fun testFindCeilingRunShowsThePillWhileSteppingAndTheCeilingWhenDone() {
+        val panel = runningPanel()
+        val stream = v150("stream-v150-find-ceiling.ndjson")
+        val steppingAt = stream.indexOfFirst { it.event == "heartbeat" && it.autopilot?.state == "stepping" }
+        stream.take(steppingAt + 1).forEach { panel.update(it) }
+        assertTrue(labels(panel).any { it.startsWith("⚡ Autopilot: Find Ceiling · Stepping") })
+        stream.drop(steppingAt + 1).forEach { panel.update(it) }
+        assertTrue(labels(panel).any { it.startsWith("✓ FINISHED — ⚡ Ceiling found: 28 RPS") })
+        assertFalse(panel.isRunning())
+    }
+
+    fun testTheAutopilotsOwnMarksAppearAsTheLastMark() {
+        val panel = runningPanel()
+        v150("stream-v150-find-ceiling.ndjson").forEach { panel.update(it) }
+        val last = labels(panel).first { it.startsWith("Last mark") }
+        assertTrue(last, last.startsWith("Last mark: “⚡ Autopilot: ceiling confirmed at 28 RPS”"))
+        assertTrue(last, last.endsWith("· 2 marks"))
+    }
+
+    fun testAMarkThatAnswersOneOfOurCommandsIsLeftToTheCommandReply() {
+        val panel = runningPanel()
+        panel.update(v150().first { it.event == "started" })
+        panel.update(v150().first { it.event == "mark" && it.id == "m_1" })
+        assertTrue(labels(panel).none { it.startsWith("Last mark") && it.isNotBlank() })
+    }
+
+    fun testWindowHealthExplainsTheCardsInATooltip() {
+        val panel = runningPanel()
+        panel.update(v150("stream-v150-errors.ndjson").first { it.event == "started" })
+        panel.update(v150("stream-v150-errors.ndjson").first { it.event == "heartbeat" })
+        val tips = tooltips(panel)
+        assertTrue(tips.toString(), tips.any { it.startsWith("Cumulative: 66.67% · Last 1s: 66.67% (60 samples)") })
+        assertTrue(tips.toString(), tips.any { it.startsWith("Last 1s P99:") })
+    }
+
+    fun testErrorStripShowsRecentFailuresOnAV15Run() {
+        val panel = runningPanel()
+        assertFalse(strip(panel).isVisible)
+        panel.update(v150("stream-v150-errors.ndjson").first { it.event == "heartbeat" })
+        assertTrue(strip(panel).isVisible)
+        assertTrue(labels(panel).any { it.startsWith("▲ Recent errors (10s): 5xx 20 · 4xx 20") })
+    }
+
+    fun testErrorStripStaysAwayOnAnOlderBinary() {
+        val panel = runningPanel()
+        panel.update(heartbeat())
+        assertFalse(strip(panel).isVisible)
+        assertTrue(tooltips(panel).none { it.startsWith("Cumulative:") })
+    }
+
+    fun testANewRunClearsTheStripAndTheTooltips() {
+        val panel = runningPanel()
+        panel.update(v150("stream-v150-errors.ndjson").first { it.event == "heartbeat" })
+        panel.reset()
+        assertFalse(strip(panel).isVisible)
+        assertTrue(tooltips(panel).none { it.startsWith("Cumulative:") })
+    }
+
+    fun testUserStopOfAnAutopilotRunAddsNoOutcomeLine() {
+        val panel = runningPanel()
+        panel.update(v150().first { it.event == "started" })
+        panel.update(parse("""{"event":"stopped","mode":"slo-guard","outcome":"stopped","message":"✓ Snapshot saved → /x.snap"}"""))
+        assertTrue(labels(panel).contains("■ STOPPED — ✓ Snapshot saved → /x.snap"))
+    }
+
+    fun testFinishedRunWithoutAutopilotShowsNoOutcome() {
+        val panel = runningPanel()
+        panel.update(parse("""{"event":"finished","message":"Load test completed"}"""))
+        assertTrue(labels(panel).contains("✓ FINISHED — Traffic simulation completed"))
+    }
 
     fun testFinishedAfterInterruptedKeepsTheStoppedStatus() {
         val panel = runningPanel()

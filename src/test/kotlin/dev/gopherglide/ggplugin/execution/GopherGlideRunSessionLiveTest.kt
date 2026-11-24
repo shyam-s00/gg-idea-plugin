@@ -11,7 +11,7 @@ import dev.gopherglide.ggplugin.execution.ui.LiveControlPanel
 import java.io.File
 import javax.swing.JButton
 
-/** Drives real sessions against real binaries; skipped unless GG_V13, GG_V12 and SPIKE_DIR are set. */
+/** Drives real sessions against real binaries; skipped unless GG_V13, GG_V12 and SPIKE_DIR are set (GG_V15 for the v1.5 test). */
 class GopherGlideRunSessionLiveTest : BasePlatformTestCase() {
     private val v13 get() = System.getenv("GG_V13")
     private val v12 get() = System.getenv("GG_V12")
@@ -93,10 +93,10 @@ class GopherGlideRunSessionLiveTest : BasePlatformTestCase() {
         val (session, panel) = startRunning(v13!!, args(dir))
         val tricky = "say \"hi\" ✓ 日本 <&> back\\slash"
         val replies = mutableListOf<ControlReply>()
-        session.sendMark("cache-warm") { replies += it }
+        session.sendMark("cache-warm", null) { replies += it }
         waitUntil("first reply") { replies.size == 1 }
         Thread.sleep(1_200)
-        session.sendMark(tricky) { replies += it }
+        session.sendMark(tricky, null) { replies += it }
         waitUntil("second reply") { replies.size == 2 }
         val recorded = replies.map { it as ControlReply.MarkRecorded }.map { it.payload }
         assertEquals(listOf("cache-warm", tricky), recorded.map { it.label })
@@ -108,6 +108,83 @@ class GopherGlideRunSessionLiveTest : BasePlatformTestCase() {
             .getAsJsonObject("meta").getAsJsonArray("marks").map { it.asJsonObject }
         assertEquals(listOf("cache-warm", tricky), marks.map { it["label"].asString })
         assertEquals(recorded[1].elapsedSeconds!!, marks[1]["elapsed_s"].asDouble, 0.001)
+    }
+
+    fun testMarkKeepsTheTimeItWasAskedForOnV15() {
+        val v15 = System.getenv("GG_V15")
+        if (v15 == null || work == null) return
+        val dir = snapDir("mark-elapsed")
+        val (session, panel) = startRunning(v15, args(dir))
+        Thread.sleep(3_000)
+        val replies = mutableListOf<ControlReply>()
+        session.sendMark("early", 1.0) { replies += it }
+        session.sendMark("future", 900.0) { replies += it }
+        waitUntil("both replies") { replies.size == 2 }
+        val (early, future) = replies.map { (it as ControlReply.MarkRecorded).payload }
+        assertEquals(1.0, early.elapsedSeconds!!, 0.001)
+        assertTrue(future.clamped == true)
+        assertTrue(future.elapsedSeconds!! < 900.0)
+        session.requestStop()
+        waitUntil("run to end") { !panel.isRunning() }
+
+        val marks = JsonParser.parseString(snaps(dir).single().readText()).asJsonObject
+            .getAsJsonObject("meta").getAsJsonArray("marks").map { it.asJsonObject }
+        assertEquals(1.0, marks.first { it["label"].asString == "early" }["elapsed_s"].asDouble, 0.001)
+    }
+
+    private fun v15Binary(): String? = System.getenv("GG_V15")?.takeIf { work != null }
+
+    fun testHoldShowsInTheStripAndReleasesOnV15() {
+        val v15 = v15Binary() ?: return
+        val (session, panel) = startRunning(v15, args(snapDir("hold")))
+        val replies = mutableListOf<ControlReply>()
+        session.sendHold(15) { replies += it }
+        waitUntil("hold ack") { replies.size == 1 }
+        assertEquals(15, (replies[0] as ControlReply.Ack).payload.holdRps)
+        waitUntil("hold badge") { labelsOf(panel).contains("📌 Hold 15 RPS") }
+        assertTrue(UIUtil.findComponentsOfType(panel, JButton::class.java).any { it.text == "Release Hold" })
+        session.sendRelease { replies += it }
+        waitUntil("release ack") { replies.size == 2 }
+        waitUntil("badge cleared") { !labelsOf(panel).contains("📌 Hold 15 RPS") }
+        session.requestStop()
+        waitUntil("run to end") { !panel.isRunning() }
+    }
+
+    fun testGuardLocksTheStepsAndStopHandsTheRateBackOnV15() {
+        val v15 = v15Binary() ?: return
+        val (session, panel) = startRunning(v15, args(snapDir("guard")))
+        val replies = mutableListOf<ControlReply>()
+        session.startAutopilot("slo-guard", 250, 0.01) { replies += it }
+        waitUntil("guard ack") { replies.size == 1 }
+        waitUntil("pill") { labelsOf(panel).any { it.startsWith("⚡ Autopilot: SLO Guard") } }
+        val plus = UIUtil.findComponentsOfType(panel, JButton::class.java).first { it.text == "+5" }
+        assertFalse(plus.isEnabled)
+        session.sendBias(5) { replies += it }
+        waitUntil("bias refused") { replies.size == 2 }
+        assertEquals("autopilot_active", (replies[1] as ControlReply.Rejected).payload.reason)
+        session.stopAutopilot { replies += it }
+        waitUntil("stop ack") { replies.size == 3 }
+        waitUntil("steps back") { plus.isEnabled }
+        session.requestStop()
+        waitUntil("run to end") { !panel.isRunning() }
+    }
+
+    fun testFindCeilingRunEndsWithItsOutcomeAndTheAutopilotsMarksOnV15() {
+        val v15 = v15Binary() ?: return
+        val dir = snapDir("ceiling")
+        val flags = arrayOf("--autopilot", "find-ceiling", "--start-rps", "10", "--max-rps", "25", "--step-interval", "2s", "--duration", "40s")
+        val panel = GopherGlideRunPanel()
+        lastPanel = panel
+        val session = GopherGlideRunSession(
+            project, v15, listOf("--http-file", "$work/test.http", "--snap", "--snap-dir", dir.path) + flags, panel
+        )
+        session.start()
+        waitUntil("started") { status(panel).startsWith("● RUNNING") }
+        waitUntil("pill") { labelsOf(panel).any { it.startsWith("⚡ Autopilot: Find Ceiling") } }
+        waitUntil("run to end", timeoutMs = 60_000) { !panel.isRunning() }
+        assertTrue(status(panel), status(panel).startsWith("✓ FINISHED — ⚡ No ceiling found up to 25 RPS cap"))
+        assertTrue(labelsOf(panel).any { it.startsWith("Last mark: “⚡ ") })
+        assertEquals(1, snaps(dir).size)
     }
 
     private fun effectivelyVisible(panel: GopherGlideRunPanel, c: java.awt.Component): Boolean =

@@ -126,8 +126,24 @@ class GopherGlideRunSession(
         control.sendBias(amount) { reply -> onEdt { onReply(reply) } }
     }
 
-    override fun sendMark(label: String, onReply: (ControlReply) -> Unit) {
-        control.sendMark(label) { reply -> onEdt { onReply(reply) } }
+    override fun sendMark(label: String, elapsedSeconds: Double?, onReply: (ControlReply) -> Unit) {
+        control.sendMark(label, elapsedSeconds) { reply -> onEdt { onReply(reply) } }
+    }
+
+    override fun sendHold(rps: Int, onReply: (ControlReply) -> Unit) {
+        control.sendHold(rps) { reply -> onEdt { onReply(reply) } }
+    }
+
+    override fun sendRelease(onReply: (ControlReply) -> Unit) {
+        control.sendRelease { reply -> onEdt { onReply(reply) } }
+    }
+
+    override fun startAutopilot(mode: String, maxP99Ms: Int?, maxErrorRate: Double?, onReply: (ControlReply) -> Unit) {
+        control.startAutopilot(mode, maxP99Ms, maxErrorRate) { reply -> onEdt { onReply(reply) } }
+    }
+
+    override fun stopAutopilot(onReply: (ControlReply) -> Unit) {
+        control.stopAutopilot { reply -> onEdt { onReply(reply) } }
     }
 
     override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) {

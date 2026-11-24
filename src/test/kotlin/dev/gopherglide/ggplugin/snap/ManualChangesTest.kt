@@ -1,6 +1,7 @@
 package dev.gopherglide.ggplugin.snap
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -61,5 +62,37 @@ class ManualChangesTest {
     fun finalBiasUsesTheRecordedFieldAndKeepsItsSign() {
         val m = SnapMeta(finalBias = -10, biasEvents = listOf(SnapBiasEvent(-10, -10, 1.0)))
         assertEquals(true, ManualChanges.describe(m, plain)!!.summary.contains("(final −10)"))
+    }
+
+    private fun withHolds(count: Int, autopilot: String? = null) = SnapMeta(
+        holdEvents = List(count) { SnapHoldEvent(rps = 10 + it, elapsedSeconds = it.toDouble()) } + SnapHoldEvent(released = true, elapsedSeconds = 99.0),
+        autopilot = autopilot?.let { SnapAutopilot(mode = it) }
+    )
+
+    @Test
+    fun holdsAreCountedAndReleasesAreNot() {
+        val notice = ManualChanges.describe(withHolds(2), plain)!!
+        assertEquals(
+            "baseline had no bias changes, 2 holds and no marks; target had no bias changes or marks.",
+            notice.summary
+        )
+        assertEquals("Peak RPS and latency may not be like for like.", notice.caveat)
+    }
+
+    @Test
+    fun anAutopilotRunGetsItsOwnNoticeAndCaveat() {
+        val notice = ManualChanges.describe(plain, withHolds(0, "find-ceiling"))!!
+        assertEquals(
+            "baseline had no bias changes or marks; target had no bias changes or marks, with autopilot find-ceiling.",
+            notice.summary
+        )
+        assertEquals("The autopilot steered the rate, so peak RPS and latency may not be like for like.", notice.caveat)
+    }
+
+    @Test
+    fun anAutopilotWithNothingElseStillTriggersTheNotice() {
+        val onlyAutopilot = SnapMeta(autopilot = SnapAutopilot(mode = "slo-guard"))
+        assertNotNull(ManualChanges.describe(onlyAutopilot, plain))
+        assertNotNull(ManualChanges.describe(plain, onlyAutopilot))
     }
 }

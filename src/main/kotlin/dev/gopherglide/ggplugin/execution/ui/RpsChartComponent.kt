@@ -2,6 +2,7 @@ package dev.gopherglide.ggplugin.execution.ui
 
 import com.intellij.ui.JBColor
 import dev.gopherglide.ggplugin.execution.annotations.AnnotationLayout
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.LabelSpan
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import dev.gopherglide.ggplugin.execution.annotations.formatElapsed
@@ -24,7 +25,8 @@ import kotlin.math.ceil
 /**
  * RPS-over-time chart: solid actual line, dotted target line. The x-axis is fixed to the run's total
  * duration when known (matching the stage timeline below it), else it scrolls over recent points,
- * e.g. against a pre-v1.1.0 `gg` binary. Run annotations are drawn only on the fixed axis.
+ * e.g. against a pre-v1.1.0 `gg` binary. Run annotations (marks, bias steps, holds, each tagged with
+ * who made them) are drawn only on the fixed axis.
  */
 class RpsChartComponent : JComponent() {
     internal data class Point(val elapsedSec: Double, val actualRps: Double, val targetRps: Int)
@@ -38,6 +40,8 @@ class RpsChartComponent : JComponent() {
     }
 
     private class BiasTick(val x: Int, val y: Int, val change: RunAnnotation.BiasChange)
+
+    private class HoldTick(val x: Int, val y: Int, val change: RunAnnotation.HoldChange)
 
     private class MarkDraw(val x: Int, val box: Rectangle?, val text: String, val mark: RunAnnotation.Mark)
 
@@ -111,6 +115,14 @@ class RpsChartComponent : JComponent() {
         }
     }
 
+    private fun holdTicks(frame: Frame): List<HoldTick> {
+        if (frame.fixedDuration <= 0.0 || points.isEmpty()) return emptyList()
+        return annotations.filterIsInstance<RunAnnotation.HoldChange>().mapNotNull { change ->
+            val level = change.rps ?: targetLevelAt(points, change.elapsedSeconds) ?: return@mapNotNull null
+            HoldTick(frame.xAt(change.elapsedSeconds), frame.y(level.toDouble()), change)
+        }
+    }
+
     private fun markDraws(frame: Frame, fm: FontMetrics): List<MarkDraw> {
         if (frame.fixedDuration <= 0.0) return emptyList()
         val marks = annotations.filterIsInstance<RunAnnotation.Mark>().sortedBy { it.elapsedSeconds }
@@ -120,7 +132,7 @@ class RpsChartComponent : JComponent() {
             else -> 0
         }
         val xs = marks.map { frame.xAt(it.elapsedSeconds) }
-        val texts = marks.map { ellipsize("${it.label} · ${formatElapsed(it.elapsedSeconds)}", fm, MAX_FLAG_TEXT) }
+        val texts = marks.map { ellipsize("${it.source.badge} ${it.label} · ${formatElapsed(it.elapsedSeconds)}", fm, MAX_FLAG_TEXT) }
         val widths = texts.map { fm.stringWidth(it) + 8 }
         val spans = marks.indices.map {
             LabelSpan(AnnotationLayout.labelLeft(xs[it], widths[it], frame.leftPad, frame.leftPad + frame.chartWidth), widths[it])
@@ -143,12 +155,21 @@ class RpsChartComponent : JComponent() {
         val frame = frame()
         biasTicks(frame).lastOrNull { abs(event.x - it.x) <= TICK_RADIUS + 2 && abs(event.y - it.y) <= TICK_RADIUS + 2 }?.let {
             val change = it.change
-            return "Bias ${formatSigned(change.amount)} → cumulative ${formatSigned(change.cumulative)} at ${formatElapsed(change.elapsedSeconds)}"
+            return "Bias ${formatSigned(change.amount)} → cumulative ${formatSigned(change.cumulative)} at ${formatElapsed(change.elapsedSeconds)}" +
+                sourceSuffix(change.source)
+        }
+        holdTicks(frame).lastOrNull { abs(event.x - it.x) <= TICK_RADIUS + 2 && abs(event.y - it.y) <= TICK_RADIUS + 2 }?.let {
+            val change = it.change
+            val what = change.rps?.let { rps -> "Hold $rps RPS" } ?: "Hold released"
+            return "$what at ${formatElapsed(change.elapsedSeconds)}" + sourceSuffix(change.source)
         }
         val draw = markDraws(frame, getFontMetrics(font))
             .lastOrNull { abs(event.x - it.x) <= 4 || it.box?.contains(event.point) == true } ?: return null
-        return "${draw.mark.label} — at ${formatElapsed(draw.mark.elapsedSeconds)}"
+        return "${draw.mark.label} — at ${formatElapsed(draw.mark.elapsedSeconds)}" + sourceSuffix(draw.mark.source)
     }
+
+    private fun sourceSuffix(source: AnnotationSource) =
+        if (source == AnnotationSource.USER) "" else " (${source.badge} ${source.wire})"
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
@@ -203,23 +224,27 @@ class RpsChartComponent : JComponent() {
 
         paintMarkFlags(g2, fm, marks)
         paintBiasTicks(g2, frame)
+        paintHoldTicks(g2, frame)
     }
 
     private fun paintMarkLines(g2: Graphics2D, frame: Frame, marks: List<MarkDraw>) {
-        g2.color = MARK_COLOR
         g2.stroke = BasicStroke(1.2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 1f, floatArrayOf(4f, 3f), 0f)
-        marks.forEach { g2.drawLine(it.x, frame.topPad, it.x, frame.topPad + frame.chartHeight) }
+        marks.forEach {
+            g2.color = markColor(it.mark.source)
+            g2.drawLine(it.x, frame.topPad, it.x, frame.topPad + frame.chartHeight)
+        }
     }
 
     private fun paintMarkFlags(g2: Graphics2D, fm: FontMetrics, marks: List<MarkDraw>) {
         g2.stroke = BasicStroke(1f)
         for (draw in marks) {
             val box = draw.box ?: continue
-            g2.color = MARK_FILL
+            val automated = draw.mark.source != AnnotationSource.USER
+            g2.color = if (automated) AUTO_FILL else MARK_FILL
             g2.fillRoundRect(box.x, box.y, box.width, box.height, 6, 6)
-            g2.color = MARK_COLOR
+            g2.color = markColor(draw.mark.source)
             g2.drawRoundRect(box.x, box.y, box.width, box.height, 6, 6)
-            g2.color = MARK_TEXT
+            g2.color = if (automated) AUTO_TEXT else MARK_TEXT
             g2.drawString(draw.text, box.x + 4, box.y + (box.height + fm.ascent) / 2 - 2)
         }
     }
@@ -243,7 +268,26 @@ class RpsChartComponent : JComponent() {
         }
     }
 
+    private fun paintHoldTicks(g2: Graphics2D, frame: Frame) {
+        val fm = g2.fontMetrics
+        g2.stroke = BasicStroke(1f)
+        for (tick in holdTicks(frame)) {
+            g2.color = HOLD_COLOR
+            g2.fillRect(tick.x - HOLD_HALF, tick.y - HOLD_HALF, HOLD_HALF * 2 + 1, HOLD_HALF * 2 + 1)
+            val label = "📌 " + (tick.change.rps?.toString() ?: "✕")
+            val labelY = (tick.y - HOLD_HALF - 3).coerceIn(fm.ascent, height - 2)
+            g2.drawString(label, (tick.x - fm.stringWidth(label) / 2).coerceAtLeast(frame.leftPad), labelY)
+        }
+    }
+
+    private fun markColor(source: AnnotationSource) = if (source == AnnotationSource.USER) MARK_COLOR else AUTO_COLOR
+
     internal companion object {
+        private const val HOLD_HALF = 3
+        private val HOLD_COLOR = JBColor(0xD2691E, 0xF0A04B)
+        private val AUTO_COLOR = JBColor(0x1565C0, 0x6AB7FF)
+        private val AUTO_FILL = JBColor(Color(106, 183, 255, 40), Color(106, 183, 255, 40))
+        private val AUTO_TEXT = JBColor(0x0D47A1, 0x9CCBFF)
         private const val TICK_RADIUS = 5
         private const val FLAG_HEIGHT = 14
         private const val MAX_FLAG_TEXT = 190

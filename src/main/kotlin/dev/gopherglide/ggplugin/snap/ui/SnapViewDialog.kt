@@ -6,16 +6,22 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
+import dev.gopherglide.ggplugin.snap.AutopilotSummary
 import dev.gopherglide.ggplugin.snap.EndpointSnap
 import dev.gopherglide.ggplugin.snap.RunTimeline
 import dev.gopherglide.ggplugin.snap.SnapModel
+import dev.gopherglide.ggplugin.snap.SnapOrigin
+import dev.gopherglide.ggplugin.snap.actions.SnapReportActions
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.FlowLayout
+import java.awt.event.ActionEvent
+import javax.swing.AbstractAction
 import javax.swing.Action
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class SnapViewDialog(project: Project, private val snap: SnapModel) : DialogWrapper(project) {
+class SnapViewDialog(private val project: Project, private val snap: SnapModel) : DialogWrapper(project) {
 
     init {
         title = "Snap: ${displayTag(snap)}"
@@ -25,18 +31,30 @@ class SnapViewDialog(project: Project, private val snap: SnapModel) : DialogWrap
 
     override fun createActions(): Array<Action> = arrayOf(okAction)
 
+    override fun createLeftSideActions(): Array<Action> = arrayOf(
+        object : AbstractAction("📄 Export Mission Report…") {
+            override fun actionPerformed(e: ActionEvent) = SnapReportActions.export(project, snap)
+        },
+        object : AbstractAction("Copy PR Markdown") {
+            override fun actionPerformed(e: ActionEvent) = SnapReportActions.copyMarkdown(project, snap)
+        }
+    )
+
     override fun createCenterPanel(): JComponent {
         val root = JPanel(BorderLayout())
         root.preferredSize = Dimension(900, 560)
 
         val top = JPanel(BorderLayout())
-        top.add(metaHeader(snap), BorderLayout.NORTH)
+        top.add(headerWithOrigin(snap), BorderLayout.NORTH)
+        val details = JPanel(BorderLayout())
+        AutopilotSummary.from(snap.meta?.autopilot)?.let { details.add(AutopilotBanner(it), BorderLayout.NORTH) }
         val timeline = RunTimeline.from(snap.meta)
         if (timeline != null) {
-            top.add(ManualChangesSection(timeline), BorderLayout.CENTER)
+            details.add(ManualChangesSection(timeline), BorderLayout.CENTER)
         } else {
-            RunTimeline.absenceNote(snap.meta)?.let { top.add(ManualChangesNote(it), BorderLayout.CENTER) }
+            RunTimeline.absenceNote(snap.meta)?.let { details.add(ManualChangesNote(it), BorderLayout.CENTER) }
         }
+        top.add(details, BorderLayout.CENTER)
         root.add(top, BorderLayout.NORTH)
 
         val tableModel = EndpointTableModel(snap.endpoints)
@@ -167,6 +185,24 @@ class SnapViewDialog(project: Project, private val snap: SnapModel) : DialogWrap
                     Metric("Sampling", samplingSummary(meta))
                 )
             )
+        }
+
+        /** The metric strip, with an "Origin" badge above it when the snapshot says who started the run. */
+        private fun headerWithOrigin(snap: SnapModel): JComponent {
+            val header = metaHeader(snap)
+            val origin = SnapOrigin.label(snap.meta?.origin) ?: return header
+            val badge = JBLabel("Origin: $origin").apply {
+                border = JBUI.Borders.compound(
+                    JBUI.Borders.customLine(JBColor(0x8DBBE8, 0x3F6C96)),
+                    JBUI.Borders.empty(1, 8)
+                )
+                foreground = JBColor(0x1F5FA8, 0x9ACBFA)
+            }
+            val row = JPanel(FlowLayout(FlowLayout.LEFT, 10, 6)).apply { add(badge) }
+            return JPanel(BorderLayout()).apply {
+                add(row, BorderLayout.NORTH)
+                add(header, BorderLayout.CENTER)
+            }
         }
 
         fun show(project: Project, snap: SnapModel) {

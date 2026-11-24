@@ -1,19 +1,36 @@
 package dev.gopherglide.ggplugin.snap
 
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import dev.gopherglide.ggplugin.execution.annotations.formatElapsed
 import dev.gopherglide.ggplugin.execution.annotations.formatSigned
 
-/** One line of the manual-changes list. [total] is the running bias after a bias change, empty for marks. */
-data class ManualChangeRow(val time: String, val kind: Kind, val detail: String, val total: String) {
-    enum class Kind { MARK, BIAS }
+/**
+ * One line of the manual-changes list. [total] is the running bias after a bias change, the pinned rate
+ * for a hold, and empty for marks.
+ */
+data class ManualChangeRow(
+    val time: String,
+    val kind: Kind,
+    val detail: String,
+    val total: String,
+    val source: AnnotationSource = AnnotationSource.USER
+) {
+    enum class Kind { MARK, BIAS, HOLD, RELEASE }
 
     companion object {
         fun from(event: RunAnnotation): ManualChangeRow = when (event) {
-            is RunAnnotation.Mark -> ManualChangeRow(formatElapsed(event.elapsedSeconds), Kind.MARK, event.label, "")
+            is RunAnnotation.Mark -> ManualChangeRow(formatElapsed(event.elapsedSeconds), Kind.MARK, event.label, "", event.source)
             is RunAnnotation.BiasChange -> ManualChangeRow(
-                formatElapsed(event.elapsedSeconds), Kind.BIAS, "${formatSigned(event.amount)} RPS", "total ${formatSigned(event.cumulative)}"
+                formatElapsed(event.elapsedSeconds), Kind.BIAS, "${formatSigned(event.amount)} RPS", "total ${formatSigned(event.cumulative)}",
+                event.source
             )
+            is RunAnnotation.HoldChange ->
+                if (event.rps != null) {
+                    ManualChangeRow(formatElapsed(event.elapsedSeconds), Kind.HOLD, "Pinned at ${event.rps} RPS", "hold ${event.rps}", event.source)
+                } else {
+                    ManualChangeRow(formatElapsed(event.elapsedSeconds), Kind.RELEASE, "Hold released", "schedule", event.source)
+                }
         }
     }
 }

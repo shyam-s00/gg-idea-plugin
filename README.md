@@ -15,6 +15,7 @@ Run traffic simulations, record and compare performance snapshots, gate regressi
 
 - **Gutter run icons** on `.http` files:
   - **Run GG** — opens a profile picker with all 21 of gg's built-in load profiles (grouped by category: E-Commerce, Standard Testing/CI, Resilience/Chaos, Auto-Scaling, Specialized), then lets you override peak RPS/duration and optionally record a snapshot before running.
+  - **⚡ Autopilot: Find Ceiling…** (top of the picker, gg v1.5.0+) — gg steps the rate up while health holds, marks where it breaches, confirms the rate it backs off to, and reports the highest sustainable RPS. No LLM involved.
   - **Run GG (Config)** — runs the file's sibling `.gg.yaml` config directly, no profile or overrides — the config owns everything.
   - **Generate config.yaml...** — scaffolds a starter `.gg.yaml` for the file without running anything.
 - **Gutter run icon** on `.gg.yaml` files:
@@ -31,6 +32,7 @@ The **Run** tab in the Gopher Glide tool window shows live, updating roughly onc
 - p50 / p95 / p99 latency
 - A scaled **RPS chart** and a **stage timeline** showing progress through the simulation's stages
 - A **Stop** toolbar button that ends the run cleanly: gg finishes writing the snapshot first, and a second click forces the process to end if it is stuck
+- With gg v1.5.0+: hover the error-rate and latency cards for the last few seconds' health next to the cumulative figures, and a one-line **Recent errors** strip names the failure classes and the endpoints failing most
 
 #### Live control (gg v1.3.0+)
 
@@ -39,7 +41,15 @@ With gg v1.3.0 or newer, a **Live Control** strip sits above the metric cards wh
 - **Bias** — **−10 / −5 / +5 / +10** change the target RPS without stopping the run, and **Reset** returns it to the planned rate. The badge shows the bias gg reports, so it always matches the run.
 - **Mark…** — drop a named marker ("cache-warm", "deploy-v2") at the current point of the run. The last mark and a count appear under the controls; hover for the full list.
 - **On the chart** — each bias change is a tick on the target line and each mark is a dashed line with its label, so you can see which change moved the numbers.
-- A mark is stamped when you confirm its label, not when you click **Mark…**.
+- With gg v1.5.0+, a mark is stamped when you click **Mark…**, not when you confirm its label. With older versions it is stamped when you confirm.
+
+With gg v1.5.0 or newer the strip also has:
+
+- **Hold RPS** — pin the rate at a number you choose, ignoring the profile's ramp, until you click **Release Hold**. A **📌 Hold N RPS** badge shows while it is in force.
+- **🛡️ Guard SLO…** — start gg's built-in SLO guard mid-run with your own p99 and error-rate limits. It clamps the rate when health breaches, then releases it in steps. While an autopilot runs, bias and hold are off and **Stop Autopilot (Take Over)** hands the rate back; a hold it set stays until you release it.
+- Marks the autopilot drops itself ("ceiling breached at 35 RPS…") appear on the chart with a ⚡ prefix; yours carry 👤.
+
+You can also protect a whole run with the SLO guard from the run dialogs (**Protect run with Autopilot SLO Guard**).
 
 With an older gg, the strip is replaced by a short notice that names the installed version and offers to install or upgrade (see below). The run itself works as before.
 
@@ -64,9 +74,11 @@ A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
 Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to a terminal:
 
 - **Refresh** — reload the snapshot list from disk.
-- **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click). For runs recorded with gg v1.3.0+, a collapsible **Manual changes** section lists every mark and bias change in time order, with four figures beside it: final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshots from older gg versions say that this was not recorded.
-- **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows). When either run had marks or bias changes made by hand, a one-line notice says so, because those runs may not be like for like.
+- **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click). For runs recorded with gg v1.3.0+, a collapsible **Manual changes** section lists every mark, bias change and hold in time order with who made it (👤 you, ⚡ the autopilot), with four figures beside it: final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshots from older gg versions say that this was not recorded. Runs steered by the autopilot also show an outcome banner above the list ("Ceiling found: 28 RPS", the limits, and why it backed off).
+- **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows). When either run had marks, bias changes, holds or an autopilot, a one-line notice says so, because those runs may not be like for like.
 - **Assert...** — run `gg snap assert` between any two snapshots and see a pass/fail breakdown against configurable latency/error-rate/payload-size regression thresholds.
+- **Export Mission Report…** (gg v1.5.0+) — save the selected snapshot's `gg snap report` as Markdown or HTML (by file extension).
+- **Copy PR Markdown** (gg v1.5.0+) — put the same report on the clipboard as Markdown, ready for a pull request description.
 - **Prune...** — delete old snapshots by ID(s), tag, keep-last count, or age, with a dry-run preview before anything is actually deleted.
 
 ### 🚀 One-click CI workflow generator
@@ -107,6 +119,7 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 
 - **IntelliJ Platform baseline:** `2024.2` (`sinceBuild = 242`)
 - **Live control:** needs `gg` v1.3.0 or newer; older versions run as before, without the controls
+- **Hold, Autopilot, click-time marks, window health and mission reports:** need `gg` v1.5.0 or newer; the plugin offers to install it when you ask for one of them on an older binary
 - **Build target:** IntelliJ IDEA Community `2024.2.4`
 - **Developer toolchain:** JDK 21
 
@@ -158,9 +171,21 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` an
 ### Steer a run while it is going
 
 1. Start a run with gg v1.3.0 or newer; the **Live Control** strip appears in the **Run** tab.
-2. Use **+5 / +10 / −5 / −10** to raise or lower the load and **Reset** to go back to the plan.
+2. Use **+5 / +10 / −5 / −10** to raise or lower the load and **Reset** to go back to the plan. With gg v1.5.0+, **Hold RPS** pins the rate instead.
 3. Click **Mark…**, type a label and confirm, to note an event such as a deploy.
 4. Click **Stop** when you are done. With snapshot recording on, the snapshot is saved before the run ends.
+
+### Find your system's ceiling
+
+1. Open a `.http` file and click the **Run GG** gutter icon.
+2. Choose **⚡ Autopilot: Find Ceiling…** at the top of the picker.
+3. Set the starting rate, the cap, your p99 and error-rate limits, and a maximum duration (at least 30 seconds), then run.
+4. The **Run** tab shows the autopilot's progress; when it finishes, the status line gives the result, and with a snapshot recorded the Snapshot View shows the same outcome banner.
+
+### Share a run
+
+1. In the **Snaps** tab, select a snapshot.
+2. Click **Export Mission Report…** to save it as `.md` or `.html`, or **Copy PR Markdown** to paste it into a pull request.
 
 ### Record a snapshot while running
 

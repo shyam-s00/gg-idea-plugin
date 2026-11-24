@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import dev.gopherglide.ggplugin.services.BinaryFeatureGate
 
 /**
  * "Run GG" for `.gg.yaml` files themselves: shows the shared [SnapOptionsDialog] (config owns
@@ -46,8 +47,12 @@ class RunGopherGlideAction : AnAction("Run GG", "Execute the Gopher-Glide traffi
                 }
             }
 
+            args.addAll(dialog.sloGuardArgs)
+
             log.info("Starting Gopher-Glide run for: ${file.path}")
-            GopherGlideExecutor.execute(project, *args.toTypedArray())
+            BinaryFeatureGate.runWith(project, dialog.sloGuardArgs.isNotEmpty()) {
+                GopherGlideExecutor.execute(project, *args.toTypedArray())
+            }
         }
     }
 }

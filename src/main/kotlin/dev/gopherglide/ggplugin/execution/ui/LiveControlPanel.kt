@@ -8,9 +8,14 @@ import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import dev.gopherglide.ggplugin.execution.AutopilotBrief
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import dev.gopherglide.ggplugin.execution.annotations.formatElapsed
 import dev.gopherglide.ggplugin.execution.annotations.formatSigned
+import dev.gopherglide.ggplugin.execution.autopilot.AutopilotOutcomes
+import dev.gopherglide.ggplugin.execution.autopilot.SloGuardDialog
+import dev.gopherglide.ggplugin.execution.autopilot.SloLimits
 import dev.gopherglide.ggplugin.execution.control.BinaryActions
 import dev.gopherglide.ggplugin.execution.control.BinaryNotice
 import dev.gopherglide.ggplugin.execution.control.BinaryNotices
@@ -33,14 +38,16 @@ import javax.swing.JSeparator
 import javax.swing.SwingConstants
 
 /**
- * Bias badge, stepper buttons and mark button for a running process, or an explanation when the binary
- * has no live control. Before a run it shows only what is known about the installed binary. Must be used on the EDT.
+ * Bias badge, stepper buttons, mark, rate hold and autopilot controls for a running process, or an
+ * explanation when the binary has no live control. Before a run it shows only what is known about the installed binary. Must be used on the EDT.
  */
 class LiveControlPanel(
     private val elapsedSeconds: () -> Double,
     private val onAnnotation: (RunAnnotation) -> Unit,
     private val promptForLabel: (parent: Component) -> String? = ::askForMarkLabel,
-    private val binaryActions: BinaryActions = BinaryActions.None
+    private val binaryActions: BinaryActions = BinaryActions.None,
+    private val promptForRate: (parent: Component, suggested: Int?) -> Int? = ::askForHoldRate,
+    private val promptForLimits: (parent: Component) -> SloLimits? = ::askForSloLimits
 ) : JPanel(BorderLayout()) {
     private var state = LiveControlState()
     private var controls: RunControls? = null
@@ -53,6 +60,7 @@ class LiveControlPanel(
     private var beforeFirstRun = true
     private var noticeButtonKind = NoticeButton.NONE
     private var stopListening: () -> Unit = {}
+    private var lastTargetRps: Int? = null
 
     private val badge = JBLabel().apply {
         isOpaque = true
@@ -71,6 +79,31 @@ class LiveControlPanel(
     private val steps = listOf(-10, -5, 5, 10).map { amount -> amount to button(formatSigned(amount)) { send(amount) } }
     private val resetButton = button("Reset") { state.resetAmount()?.let(::send) }
     private val markButton = button("Mark…") { dropMark() }
+    private val holdBadge = JBLabel().apply {
+        isOpaque = true
+        font = font.deriveFont(Font.BOLD)
+        foreground = JBColor(0x8A3F0A, 0xF0B27A)
+        background = JBColor(0xFFEBDD, 0x3D2E22)
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(JBColor(0xE59A5C, 0x8A5A32)), JBUI.Borders.empty(1, 8)
+        )
+        toolTipText = "The rate is pinned and ignores the profile's ramp until released."
+        isVisible = false
+    }
+    private val holdButton = button("Hold RPS") { toggleHold() }
+    private val autopilotPill = JBLabel().apply {
+        isOpaque = true
+        font = font.deriveFont(Font.BOLD)
+        foreground = JBColor(0x0D47A1, 0x9CCBFF)
+        background = JBColor(0xE3F0FF, 0x263646)
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(JBColor(0x8DBBE8, 0x3F6C96)), JBUI.Borders.empty(1, 8)
+        )
+        isVisible = false
+    }
+    private val guardButton = button("🛡️ Guard SLO…") { startGuard() }
+    private val stopAutopilotButton = button("Stop Autopilot (Take Over)") { stopAutopilot() }
+    private val autopilotSeparator = JSeparator(SwingConstants.VERTICAL).apply { preferredSize = JBUI.size(2, 20) }
 
     private val strip = JPanel(BorderLayout())
     private val noticeText = JBLabel()
@@ -111,6 +144,12 @@ class LiveControlPanel(
             add(resetButton)
             add(JSeparator(SwingConstants.VERTICAL).apply { preferredSize = JBUI.size(2, 20) })
             add(markButton)
+            add(holdBadge)
+            add(holdButton)
+            add(autopilotSeparator)
+            add(autopilotPill)
+            add(guardButton)
+            add(stopAutopilotButton)
         }
         info.add(hint)
         info.add(lastMark)
@@ -158,6 +197,7 @@ class LiveControlPanel(
         controls = null
         runActive = false
         marks.clear()
+        lastTargetRps = null
         installed = null
         latest = null
         installProgress = InstallProgress.IDLE
@@ -180,8 +220,26 @@ class LiveControlPanel(
         refresh()
     }
 
-    fun onHeartbeat(bias: Int) {
+    fun onHeartbeat(bias: Int, holdRps: Int? = null, autopilot: AutopilotBrief? = null, targetRps: Int? = null) {
+        targetRps?.let { lastTargetRps = it }
         state.onHeartbeatBias(bias)
+        state.onHoldReported(holdRps)
+        state.onHeartbeatAutopilot(autopilot)
+        refresh()
+    }
+
+    fun onAutopilotEvent(mode: String?, autopilotState: String?) {
+        state.onAutopilotEvent(mode, autopilotState)
+        refresh()
+    }
+
+    /** A mark nobody here asked for, such as one the autopilot drops. */
+    fun onUnsolicitedMark(label: String, elapsedSeconds: Double, source: AnnotationSource) {
+        val mark = RunAnnotation.Mark(label, elapsedSeconds, source)
+        marks.add(mark)
+        marks.sortBy { it.elapsedSeconds }
+        onAnnotation(mark)
+        showLastMark()
         refresh()
     }
 
@@ -249,8 +307,64 @@ class LiveControlPanel(
         refresh()
     }
 
+    private fun toggleHold() {
+        val controls = controls ?: return
+        val sentWith = state
+        if (state.holdRps != null) {
+            if (!state.canRelease) return
+            controls.sendRelease { reply -> onHoldReply(sentWith, reply) }
+            return
+        }
+        if (!state.canHold) return
+        val rps = promptForRate(this, lastTargetRps) ?: return
+        if (!state.canHold) {
+            showHint("The run ended before the hold could be sent")
+            return
+        }
+        controls.sendHold(rps) { reply -> onHoldReply(sentWith, reply) }
+    }
+
+    private fun onHoldReply(sentWith: LiveControlState, reply: ControlReply) {
+        if (sentWith !== state) return
+        if (reply is ControlReply.Ack) {
+            showHint("")
+            state.onHoldReported(reply.payload.holdRps)
+            val at = reply.payload.elapsedSeconds ?: elapsedSeconds()
+            onAnnotation(RunAnnotation.HoldChange(reply.payload.holdRps, at, AnnotationSource.fromWire(reply.payload.source)))
+        } else {
+            showFailure(reply)
+        }
+        refresh()
+    }
+
+    private fun startGuard() {
+        val controls = controls ?: return
+        if (!state.canStartAutopilot) return
+        val limits = promptForLimits(this) ?: return
+        if (!state.canStartAutopilot) {
+            showHint("The run ended before the guard could start")
+            return
+        }
+        val sentWith = state
+        controls.startAutopilot(GUARD_MODE, limits.maxP99Ms, limits.maxErrorRate.toDouble()) { reply -> onAutopilotReply(sentWith, reply) }
+    }
+
+    private fun stopAutopilot() {
+        val controls = controls ?: return
+        if (!state.canStopAutopilot) return
+        val sentWith = state
+        controls.stopAutopilot { reply -> onAutopilotReply(sentWith, reply) }
+    }
+
+    private fun onAutopilotReply(sentWith: LiveControlState, reply: ControlReply) {
+        if (sentWith !== state) return
+        if (reply is ControlReply.Ack) showHint("") else showFailure(reply)
+        refresh()
+    }
+
     private fun dropMark() {
         if (!state.canMark) return
+        val clickedAt = elapsedSeconds()
         val label = promptForLabel(this)?.let(MarkLabels::normalize) ?: return
         val controls = controls
         if (controls == null || !state.canMark) {
@@ -258,15 +372,17 @@ class LiveControlPanel(
             return
         }
         val sentWith = state
-        controls.sendMark(label) { reply -> onMarkReply(sentWith, label, reply) }
+        val at = clickedAt.takeIf { state.canMarkWithElapsed }?.let { Math.round(it * 1000) / 1000.0 }
+        controls.sendMark(label, at) { reply -> onMarkReply(sentWith, label, clickedAt, reply) }
     }
 
-    private fun onMarkReply(sentWith: LiveControlState, label: String, reply: ControlReply) {
+    private fun onMarkReply(sentWith: LiveControlState, label: String, clickedAt: Double, reply: ControlReply) {
         if (sentWith !== state) return
         if (reply is ControlReply.MarkRecorded) {
             showHint("")
-            val mark = RunAnnotation.Mark(reply.payload.label ?: label, reply.payload.elapsedSeconds ?: elapsedSeconds())
+            val mark = RunAnnotation.Mark(reply.payload.label ?: label, reply.payload.elapsedSeconds ?: clickedAt)
             marks.add(mark)
+            marks.sortBy { it.elapsedSeconds }
             onAnnotation(mark)
             showLastMark()
         } else {
@@ -285,10 +401,12 @@ class LiveControlPanel(
 
     private fun showLastMark() {
         val last = marks.last()
-        val shown = if (last.label.length > MAX_SHOWN_LABEL) last.label.take(MAX_SHOWN_LABEL) + "…" else last.label
+        val badge = if (last.source == AnnotationSource.USER) "" else "${last.source.badge} "
+        val shown = badge + if (last.label.length > MAX_SHOWN_LABEL) last.label.take(MAX_SHOWN_LABEL) + "…" else last.label
         lastMark.text = "Last mark: “$shown” at ${formatElapsed(last.elapsedSeconds)} · ${marks.size} ${if (marks.size == 1) "mark" else "marks"}"
         lastMark.toolTipText = marks.joinToString(prefix = "<html>", separator = "<br>", postfix = "</html>") {
-            "${formatElapsed(it.elapsedSeconds)}&nbsp;&nbsp;${escapeHtml(it.label)}"
+            val badge = if (it.source == AnnotationSource.USER) "" else "${it.source.badge} "
+            "${formatElapsed(it.elapsedSeconds)}&nbsp;&nbsp;$badge${escapeHtml(it.label)}"
         }
         lastMark.isVisible = true
         syncInfoRow()
@@ -318,6 +436,28 @@ class LiveControlPanel(
         steps.forEach { it.second.isEnabled = state.canBias }
         resetButton.isEnabled = state.canReset
         markButton.isEnabled = state.canMark
+        refreshHoldAndAutopilot(shown)
+    }
+
+    private fun refreshHoldAndAutopilot(shown: Boolean) {
+        val hold = state.holdRps
+        holdBadge.isVisible = shown && hold != null
+        holdBadge.text = "📌 Hold ${hold ?: ""} RPS"
+        holdButton.isVisible = state.offersHold
+        holdButton.text = if (hold != null) "Release Hold" else "Hold RPS"
+        holdButton.isEnabled = if (hold != null) state.canRelease else state.canHold
+
+        val brief = state.autopilot
+        autopilotSeparator.isVisible = state.offersHold || state.offersAutopilot
+        autopilotPill.isVisible = shown && brief != null
+        autopilotPill.text = brief?.let { AutopilotOutcomes.pill(it.mode, it.state, hold) }.orEmpty()
+        guardButton.isVisible = state.offersAutopilot && brief == null
+        guardButton.isEnabled = state.canStartAutopilot
+        stopAutopilotButton.isVisible = state.offersAutopilot && brief != null
+        stopAutopilotButton.isEnabled = state.canStopAutopilot
+
+        val lock = if (state.autopilotActive) AUTOPILOT_OWNS_RATE else null
+        (steps.map { it.second } + listOf(resetButton, holdButton)).forEach { it.toolTipText = lock }
     }
 
     private fun renderNotice(model: BinaryNotice) {
@@ -369,6 +509,8 @@ class LiveControlPanel(
 
     private companion object {
         const val MAX_SHOWN_LABEL = 40
+        const val GUARD_MODE = "slo-guard"
+        const val AUTOPILOT_OWNS_RATE = "The autopilot owns the rate. Stop it to steer by hand."
     }
 }
 
@@ -384,3 +526,19 @@ private fun askForMarkLabel(parent: Component): String? = Messages.showInputDial
         override fun getErrorText(inputString: String?) = if (checkInput(inputString)) null else "Enter a label"
     }
 )
+
+private fun askForHoldRate(parent: Component, suggested: Int?): Int? = Messages.showInputDialog(
+    parent,
+    "Rate to pin, in requests per second:",
+    "Hold RPS",
+    null,
+    suggested?.toString().orEmpty(),
+    object : InputValidatorEx {
+        override fun checkInput(inputString: String?) = inputString?.trim()?.toIntOrNull()?.let { it >= 1 } == true
+        override fun canClose(inputString: String?) = checkInput(inputString)
+        override fun getErrorText(inputString: String?) = if (checkInput(inputString)) null else "Enter a whole number of at least 1"
+    }
+)?.trim()?.toIntOrNull()
+
+private fun askForSloLimits(parent: Component): SloLimits? =
+    SloGuardDialog(parent).let { if (it.showAndGet()) it.limits else null }

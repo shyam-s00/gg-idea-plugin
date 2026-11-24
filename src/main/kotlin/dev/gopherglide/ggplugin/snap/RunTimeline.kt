@@ -1,5 +1,6 @@
 package dev.gopherglide.ggplugin.snap
 
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import dev.gopherglide.ggplugin.execution.annotations.formatElapsed
 import dev.gopherglide.ggplugin.execution.annotations.formatSigned
@@ -17,18 +18,21 @@ data class ChangeStats(
     val firstChangeSeconds: Double
 )
 
-/** The marks and bias changes recorded in a snapshot, with the run's length when it is known. */
+/** The marks, bias changes and holds recorded in a snapshot, with the run's length when it is known. */
 data class RunTimeline(
     val durationSeconds: Double,
     val marks: List<RunAnnotation.Mark>,
     val biasChanges: List<RunAnnotation.BiasChange>,
-    val finalBias: Int?
+    val finalBias: Int?,
+    val holdChanges: List<RunAnnotation.HoldChange> = emptyList()
 ) {
-    /** Every event in time order; a mark sorts before a bias change at the same instant. */
-    val events: List<RunAnnotation> = (marks + biasChanges).sortedBy { it.elapsedSeconds }
+    /** Every event in time order; at the same instant a mark sorts before a bias change, then a hold. */
+    val events: List<RunAnnotation> = (marks + biasChanges + holdChanges).sortedBy { it.elapsedSeconds }
 
     fun summary(): String {
         val parts = mutableListOf<String>()
+        val holds = holdChanges.count { it.rps != null }
+        if (holds > 0) parts += "$holds ${if (holds == 1) "hold" else "holds"}"
         if (biasChanges.isNotEmpty()) {
             val count = "${biasChanges.size} bias ${if (biasChanges.size == 1) "change" else "changes"}"
             parts += finalBias?.let { "$count (final ${formatSigned(it)})" } ?: count
@@ -70,15 +74,23 @@ data class RunTimeline(
     }
 
     companion object {
-        /** Null when the snapshot has no marks or bias events. */
+        /** Null when the snapshot has no marks, bias events or holds. */
         fun from(meta: SnapMeta?): RunTimeline? {
             if (meta == null) return null
-            val marks = meta.marks.orEmpty().map { RunAnnotation.Mark(it.label, it.elapsedSeconds) }
-            val changes = meta.biasEvents.orEmpty().map { RunAnnotation.BiasChange(it.amount, it.cumulative, it.elapsedSeconds) }
-            if (marks.isEmpty() && changes.isEmpty()) return null
-            val latest = (marks + changes).maxOf { it.elapsedSeconds }
+            val marks = meta.marks.orEmpty().map { RunAnnotation.Mark(it.label, it.elapsedSeconds, AnnotationSource.fromWire(it.source)) }
+            val changes = meta.biasEvents.orEmpty().map {
+                RunAnnotation.BiasChange(it.amount, it.cumulative, it.elapsedSeconds, AnnotationSource.fromWire(it.source))
+            }
+            val holds = meta.holdEvents.orEmpty().map {
+                RunAnnotation.HoldChange(it.rps.takeUnless { _ -> it.released == true }, it.elapsedSeconds, AnnotationSource.fromWire(it.source))
+            }
+            if (marks.isEmpty() && changes.isEmpty() && holds.isEmpty()) return null
+            val latest = (marks + changes + holds).maxOf { it.elapsedSeconds }
             val duration = maxOf(wallClockSeconds(meta) ?: 0.0, latest)
-            return RunTimeline(duration, marks.sortedBy { it.elapsedSeconds }, changes.sortedBy { it.elapsedSeconds }, meta.finalBias ?: changes.lastOrNull()?.cumulative)
+            return RunTimeline(
+                duration, marks.sortedBy { it.elapsedSeconds }, changes.sortedBy { it.elapsedSeconds },
+                meta.finalBias ?: changes.lastOrNull()?.cumulative, holds.sortedBy { it.elapsedSeconds }
+            )
         }
 
         /**
@@ -86,7 +98,11 @@ data class RunTimeline(
          * so its absence means the events were never recorded. Null when events exist.
          */
         fun absenceNote(meta: SnapMeta?): String? {
-            if (meta == null || meta.marks.orEmpty().isNotEmpty() || meta.biasEvents.orEmpty().isNotEmpty()) return null
+            if (meta == null || meta.marks.orEmpty().isNotEmpty() || meta.biasEvents.orEmpty().isNotEmpty() ||
+                meta.holdEvents.orEmpty().isNotEmpty()
+            ) {
+                return null
+            }
             return if (meta.finalBias != null) "No marks or bias changes during this run" else "Marks and bias changes: not recorded (needs gg v1.3.0+)"
         }
 

@@ -10,6 +10,8 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
+import dev.gopherglide.ggplugin.execution.autopilot.AutopilotCeilingDialog
+import dev.gopherglide.ggplugin.services.BinaryFeatureGate
 
 /**
  * Unified "Run GG" entry point for `.http` files: always profile-driven via a profile picker
@@ -37,6 +39,7 @@ class RunGopherGlideHttpAction : AnAction(
     companion object {
         fun showProfilePicker(project: Project, httpFile: VirtualFile, dataContext: DataContext) {
             val actionGroup = DefaultActionGroup()
+            actionGroup.add(autopilotAction { findCeiling(project, httpFile) })
             var currentCategory: ProfileCategory? = null
             for (profile in ProfileCatalog.profiles) {
                 if (profile.category != currentCategory) {
@@ -54,6 +57,21 @@ class RunGopherGlideHttpAction : AnAction(
                 true
             )
             popup.showInBestPositionFor(dataContext)
+        }
+
+        private fun autopilotAction(onChosen: () -> Unit): AnAction =
+            object : AnAction("⚡ Autopilot: Find Ceiling…") {
+                override fun actionPerformed(e: AnActionEvent) = onChosen()
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
+            }
+
+        private fun findCeiling(project: Project, httpFile: VirtualFile) {
+            BinaryFeatureGate.ensure(project, BinaryFeatureGate.AUTOPILOT) {
+                val dialog = AutopilotCeilingDialog(project)
+                if (!dialog.showAndGet()) return@ensure
+                val args = listOf("--http-file", httpFile.path) + dialog.autopilotArgs() + dialog.snapArgs
+                GopherGlideExecutor.execute(project, *args.toTypedArray())
+            }
         }
 
         private fun profileAction(profile: GgProfile, onChosen: () -> Unit): AnAction =
@@ -83,7 +101,11 @@ class RunGopherGlideHttpAction : AnAction(
                 }
             }
 
-            GopherGlideExecutor.execute(project, *args.toTypedArray())
+            args.addAll(dialog.sloGuardArgs)
+
+            BinaryFeatureGate.runWith(project, dialog.sloGuardArgs.isNotEmpty()) {
+                GopherGlideExecutor.execute(project, *args.toTypedArray())
+            }
         }
     }
 }

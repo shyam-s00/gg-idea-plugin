@@ -35,14 +35,16 @@ intellijPlatform {
         }
 
         changeNotes = """
-            <b>Live control for running simulations (needs gg v1.3.0+)</b><br>
+            <b>Autopilot, rate hold and shareable reports (needs gg v1.5.0+)</b><br>
             <ul>
-            <li><b>Steer a run</b> — raise or lower the target RPS with +5 / +10 / −5 / −10, reset to the plan, and drop named marks, all without stopping the run. Bias changes and marks appear on the RPS chart.</li>
-            <li><b>Stop now keeps the snapshot</b> — gg is asked to stop cleanly and finishes writing the snapshot; if it does not answer, the process is interrupted, and a second click forces it to end.</li>
-            <li><b>Manual changes in Snapshot View</b> — a list of every mark and bias change in time order, with final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshot Diff adds a one-line notice when either run was changed by hand.</li>
-            <li><b>Know your gg before you run</b> — the Run tab shows whether the installed gg supports live control, and offers to install or upgrade it. A startup check (once a day, can be turned off in Settings) tells you when a newer gg is available.</li>
-            <li>Marks are stamped when you confirm the label.</li>
-            <li>Older gg versions keep working as before.</li>
+            <li><b>Find your ceiling</b> — pick <i>Autopilot: Find Ceiling…</i> at the top of the profile picker. gg steps the rate up while health holds, marks the breach, confirms the rate it backs off to, and reports the highest sustainable RPS. No LLM involved.</li>
+            <li><b>Guard a run</b> — tick <i>Protect run with Autopilot SLO Guard</i> in the run dialogs, or press <i>Guard SLO…</i> mid-run, to clamp the rate when p99 or the error rate breaches your limits. <i>Stop Autopilot (Take Over)</i> hands the rate back.</li>
+            <li><b>Hold RPS</b> — pin the rate at a number you choose until you release it.</li>
+            <li><b>Marks are stamped when you click</b> — typing the label no longer shifts the mark's position on the chart.</li>
+            <li><b>Know what is failing</b> — a Recent errors strip names the failure classes and the endpoints failing most, and the error and latency cards show the last few seconds' health on hover.</li>
+            <li><b>Autopilot in snapshots</b> — an outcome banner, who made each change (you or the autopilot), holds and releases in the timeline, and a diff notice when a run was steered.</li>
+            <li><b>Share a run</b> — export a snapshot's mission report as Markdown or HTML, or copy it as Markdown for a pull request.</li>
+            <li>Older gg versions keep working as before; the plugin offers to install a newer gg when you ask for one of these.</li>
             </ul>
         """.trimIndent()
     }

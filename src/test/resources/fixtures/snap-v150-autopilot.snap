@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "meta": {
+    "tag": "autopilot-demo",
+    "profile_name": "smoke",
+    "profile_scale": 2,
+    "start_time": "2026-11-23T22:39:08.064858-04:00",
+    "end_time": "2026-11-23T22:39:24.066882-04:00",
+    "peak_rps": 20,
+    "total_requests": 353,
+    "config_hash": "sha256:4a4c78a64245d3da1a71c0c8b93ca16949b5917f3e538c34aa7ceae26911937d",
+    "snap_settings": {
+      "sample_rate": 0.05,
+      "max_samples": 200,
+      "max_body_kb": 0
+    },
+    "final_bias": 5,
+    "marks": [
+      {
+        "label": "warm-up done",
+        "elapsed_s": 1.5
+      },
+      {
+        "label": "Autopilot SLO Guard triggered: errors=66.7% \u003e 1.0%; top failing: GET /fail/checkout 503; clamping 25 to 17 RPS",
+        "elapsed_s": 8.130583875,
+        "source": "autopilot"
+      }
+    ],
+    "bias_events": [
+      {
+        "amount": 5,
+        "cumulative": 5,
+        "elapsed_s": 2.601409625
+      }
+    ],
+    "hold_events": [
+      {
+        "rps": 15,
+        "elapsed_s": 3.611038625
+      },
+      {
+        "released": true,
+        "elapsed_s": 5.12027825
+      },
+      {
+        "released": true,
+        "elapsed_s": 12.170369792
+      }
+    ],
+    "autopilot": {
+      "mode": "slo-guard",
+      "outcome": "stopped",
+      "params": {
+        "mode": "slo-guard",
+        "max_p99_ms": 250,
+        "max_error_rate": 0.01,
+        "min_samples": 50,
+        "settle_s": 2,
+        "step_interval_s": 5,
+        "recover_hold_s": 10
+      },
+      "events": [
+        {
+          "state": "watching",
+          "reason": "watching p99 \u003c= 250ms, errors \u003c= 1.0%",
+          "elapsed_s": 0
+        },
+        {
+          "state": "clamped",
+          "hold_rps": 17,
+          "reason": "clamped to 17 RPS (errors=66.7% \u003e 1.0%)",
+          "elapsed_s": 2
+        },
+        {
+          "state": "done",
+          "hold_rps": 17,
+          "reason": "run ended",
+          "outcome": "stopped",
+          "elapsed_s": 4
+        }
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "id": "GET:http://127.0.0.1:18099/ok",
+      "status_dist": {
+        "200": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "payload_size": {
+        "avg": 2,
+        "p95": 2,
+        "max": 2
+      },
+      "error_rate": 0,
+      "request_count": 118,
+      "body_samples_observed": 6,
+      "body_samples_stored": 6
+    },
+    {
+      "id": "GET:http://127.0.0.1:18099/fail/checkout",
+      "status_dist": {
+        "503": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "payload_size": {
+        "avg": 2,
+        "p95": 2,
+        "max": 2
+      },
+      "error_rate": 1,
+      "request_count": 118,
+      "body_samples_observed": 6,
+      "body_samples_stored": 6
+    },
+    {
+      "id": "GET:http://127.0.0.1:18099/missing/item",
+      "status_dist": {
+        "404": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "payload_size": {
+        "avg": 2,
+        "p95": 2,
+        "max": 2
+      },
+      "error_rate": 1,
+      "request_count": 117,
+      "body_samples_observed": 5,
+      "body_samples_stored": 5
+    }
+  ]
+}

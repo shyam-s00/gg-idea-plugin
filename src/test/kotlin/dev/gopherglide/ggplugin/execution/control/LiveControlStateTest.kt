@@ -1,5 +1,6 @@
 package dev.gopherglide.ggplugin.execution.control
 
+import dev.gopherglide.ggplugin.execution.AutopilotBrief
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,6 +10,8 @@ import org.junit.Test
 
 class LiveControlStateTest {
     private val all = listOf("control.bias", "control.mark", "control.stop")
+    private val v15 = all + listOf("control.mark.elapsed", "control.hold", "control.autopilot")
+    private val guard = AutopilotBrief("slo-guard", "watching")
 
     private fun ack(bias: Int?) = ControlReply.Ack(HeartbeatPayload(event = "ack", bias = bias))
 
@@ -160,5 +163,95 @@ class LiveControlStateTest {
         state.onHeartbeatBias(10)
         state.onStopRequested()
         assertNull(state.resetAmount())
+    }
+
+    @Test
+    fun aV13BinaryOffersNeitherHoldNorAutopilotNorClickTimeMarks() {
+        val state = active(all)
+        assertFalse(state.canHold)
+        assertFalse(state.canRelease)
+        assertFalse(state.canStartAutopilot)
+        assertFalse(state.canStopAutopilot)
+        assertTrue(state.canMark)
+        assertFalse(state.canMarkWithElapsed)
+    }
+
+    @Test
+    fun aV15BinaryOffersEverything() {
+        val state = active(v15)
+        assertTrue(state.canHold)
+        assertTrue(state.canStartAutopilot)
+        assertTrue(state.canMarkWithElapsed)
+        assertFalse(state.canRelease)
+        assertFalse(state.canStopAutopilot)
+    }
+
+    @Test
+    fun clickTimeMarksNeedTheMarkCapabilityToo() {
+        assertFalse(active(listOf("control.mark.elapsed")).canMarkWithElapsed)
+        assertFalse(active(v15).also { it.onStopRequested() }.canMarkWithElapsed)
+    }
+
+    @Test
+    fun heartbeatsSetAndClearTheHold() {
+        val state = active(v15)
+        state.onHoldReported(15)
+        assertEquals(15, state.holdRps)
+        assertTrue(state.canRelease)
+        state.onHoldReported(null)
+        assertNull(state.holdRps)
+        assertFalse(state.canRelease)
+    }
+
+    @Test
+    fun aRunningAutopilotLocksBiasHoldAndRelease() {
+        val state = active(v15)
+        state.onHoldReported(280)
+        state.onHeartbeatAutopilot(guard)
+        assertTrue(state.autopilotActive)
+        assertFalse(state.canBias)
+        assertFalse(state.canReset)
+        assertFalse(state.canHold)
+        assertFalse(state.canRelease)
+        assertFalse(state.canStartAutopilot)
+        assertTrue(state.canStopAutopilot)
+        assertTrue(state.canMark)
+    }
+
+    @Test
+    fun theHoldOutlivesTheAutopilotThatSetIt() {
+        val state = active(v15)
+        state.onHoldReported(280)
+        state.onHeartbeatAutopilot(guard)
+        state.onAutopilotEvent("slo-guard", "done")
+        state.onHoldReported(280)
+        state.onHeartbeatAutopilot(null)
+        assertFalse(state.autopilotActive)
+        assertEquals(280, state.holdRps)
+        assertTrue(state.canRelease)
+        assertTrue(state.canHold)
+        assertTrue(state.canBias)
+    }
+
+    @Test
+    fun autopilotEventsTrackWhetherItIsStillRunning() {
+        val state = active(v15)
+        listOf("watching", "stepping", "clamped", "breached", "confirming").forEach {
+            state.onAutopilotEvent("find-ceiling", it)
+            assertTrue(it, state.autopilotActive)
+        }
+        assertEquals("confirming", state.autopilot?.state)
+        state.onAutopilotEvent("find-ceiling", "done")
+        assertNull(state.autopilot)
+        state.onAutopilotEvent("find-ceiling", null)
+        assertFalse(state.autopilotActive)
+    }
+
+    @Test
+    fun anEndedRunOffersNoAutopilotControl() {
+        val state = active(v15)
+        state.onHeartbeatAutopilot(guard)
+        state.onEnded()
+        assertFalse(state.canStopAutopilot)
     }
 }

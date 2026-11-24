@@ -19,6 +19,10 @@ class SnapOptionsPanel {
     val snapTag: String?
         get() = tagField.text.trim().takeIf { it.isNotBlank() }
 
+    /** `--snap` and `--snap-tag` for the chosen options, or empty when snapshotting is off. */
+    val args: List<String>
+        get() = if (!snapEnabled) emptyList() else listOf("--snap") + (snapTag?.let { listOf("--snap-tag", it) } ?: emptyList())
+
     init {
         tagField.isEnabled = false
         snapCheckBox.addActionListener { tagField.isEnabled = snapCheckBox.isSelected }

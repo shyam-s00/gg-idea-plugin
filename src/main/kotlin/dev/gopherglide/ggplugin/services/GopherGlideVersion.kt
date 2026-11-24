@@ -26,10 +26,13 @@ data class GopherGlideVersion(
 
     val supportsLiveControl: Boolean get() = coreAtLeast(MIN_LIVE_CONTROL)
 
+    val supportsAutopilotAndMcp: Boolean get() = coreAtLeast(MIN_AUTOPILOT_AND_MCP)
+
     override fun toString(): String = "v$major.$minor.$patch" + (preRelease?.let { "-$it" } ?: "")
 
     companion object {
         val MIN_LIVE_CONTROL = GopherGlideVersion(1, 3, 0)
+        val MIN_AUTOPILOT_AND_MCP = GopherGlideVersion(1, 5, 0)
 
         private val labelled = Regex("""Version:\s*(\S+)""")
         private val semver = Regex("""v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.\-]+))?""")

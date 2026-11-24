@@ -1,6 +1,7 @@
 package dev.gopherglide.ggplugin.snap
 
 import com.google.gson.Gson
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -188,5 +189,85 @@ class RunTimelineTest {
         assertNull(RunTimeline.absenceNote(fixture("snap-v130-annotated.snap").meta))
         assertNull(RunTimeline.absenceNote(meta("""{"marks":[{"label":"a","elapsed_s":0}]}""")))
         assertNull(RunTimeline.absenceNote(null))
+    }
+
+    @Test
+    fun v150SnapshotParsesHoldEventsOriginAndTheAutopilot() {
+        val meta = fixture("snap-v150-autopilot.snap").meta!!
+        assertEquals(listOf(15, null, null), meta.holdEvents!!.map { it.rps })
+        assertEquals(listOf(null, true, true), meta.holdEvents!!.map { it.released })
+        assertNull(meta.origin)
+        assertEquals("slo-guard", meta.autopilot!!.mode)
+        assertEquals("stopped", meta.autopilot!!.outcome)
+        assertEquals(3, meta.autopilot!!.events!!.size)
+    }
+
+    @Test
+    fun holdsAndReleasesJoinTheTimelineInTimeOrder() {
+        val timeline = RunTimeline.from(fixture("snap-v150-autopilot.snap").meta)!!
+        assertEquals(listOf(15, null, null), timeline.holdChanges.map { it.rps })
+        assertEquals(timeline.events.map { it.elapsedSeconds }.sorted(), timeline.events.map { it.elapsedSeconds })
+        assertEquals(
+            listOf("mark", "bias", "hold", "release", "mark", "release"),
+            timeline.events.map {
+                when (it) {
+                    is RunAnnotation.Mark -> "mark"
+                    is RunAnnotation.BiasChange -> "bias"
+                    is RunAnnotation.HoldChange -> if (it.rps != null) "hold" else "release"
+                }
+            }
+        )
+    }
+
+    @Test
+    fun theAutopilotsMarkCarriesItsSourceAndTheUsersDoesNot() {
+        val marks = RunTimeline.from(fixture("snap-v150-autopilot.snap").meta)!!.marks
+        assertEquals(AnnotationSource.USER, marks.first { it.label == "warm-up done" }.source)
+        assertEquals(AnnotationSource.AUTOPILOT, marks.first { it.label.startsWith("Autopilot SLO Guard") }.source)
+    }
+
+    @Test
+    fun summaryCountsHoldsButNotTheirReleases() {
+        val summary = RunTimeline.from(fixture("snap-v150-autopilot.snap").meta)!!.summary()
+        assertEquals("1 hold · 1 bias change (final +5) · 2 marks · 0:16 run", summary)
+    }
+
+    @Test
+    fun aSnapshotWithOnlyHoldsStillHasATimeline() {
+        val timeline = RunTimeline.from(meta("""{"final_bias":0,"hold_events":[{"rps":40,"elapsed_s":3.0},{"released":true,"elapsed_s":9.0}]}"""))!!
+        assertEquals(2, timeline.events.size)
+        assertEquals("1 hold · 0:09 run", timeline.summary())
+        assertNull(RunTimeline.absenceNote(meta("""{"hold_events":[{"rps":40,"elapsed_s":3.0}]}""")))
+    }
+
+    @Test
+    fun anAutopilotWithoutAnyManualEventHasNoTimelineAndSaysNothingWasChanged() {
+        val meta = meta("""{"final_bias":0,"autopilot":{"mode":"slo-guard","outcome":"stopped"}}""")
+        assertNull(RunTimeline.from(meta))
+        assertEquals("No marks or bias changes during this run", RunTimeline.absenceNote(meta))
+    }
+
+    @Test
+    fun preV15SnapshotsHaveNoHoldsAndEveryEventIsTheUsers() {
+        val timeline = RunTimeline.from(fixture("snap-v130-annotated.snap").meta)!!
+        assertEquals(emptyList<RunAnnotation.HoldChange>(), timeline.holdChanges)
+        assertEquals(setOf(AnnotationSource.USER), timeline.events.map { it.source }.toSet())
+        assertEquals("3 bias changes (final +15) · 2 marks · 0:14 run", timeline.summary())
+        assertNull(fixture("snap-v130-annotated.snap").meta!!.autopilot)
+    }
+
+    @Test
+    fun aReleaseFlaggedEventIsAReleaseEvenIfItAlsoNamesARate() {
+        val timeline = RunTimeline.from(meta("""{"hold_events":[{"rps":30,"released":true,"elapsed_s":2.0}]}"""))!!
+        assertNull(timeline.holdChanges.single().rps)
+    }
+
+    @Test
+    fun sourcesOnBiasAndHoldEventsAreRead() {
+        val timeline = RunTimeline.from(
+            meta("""{"bias_events":[{"amount":5,"cumulative":5,"elapsed_s":1.0,"source":"agent"}],"hold_events":[{"rps":9,"elapsed_s":2.0,"source":"autopilot"}]}""")
+        )!!
+        assertEquals(AnnotationSource.AGENT, timeline.biasChanges.single().source)
+        assertEquals(AnnotationSource.AUTOPILOT, timeline.holdChanges.single().source)
     }
 }

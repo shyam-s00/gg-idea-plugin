@@ -1,5 +1,6 @@
 package dev.gopherglide.ggplugin.snap
 
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -33,5 +34,28 @@ class ManualChangeRowsTest {
             ),
             ChangeTiles.from(stats, 150.0)
         )
+    }
+
+    @Test
+    fun aHoldRowSaysWhereTheRateWasPinned() {
+        assertEquals(
+            ManualChangeRow("0:34", ManualChangeRow.Kind.HOLD, "Pinned at 280 RPS", "hold 280", AnnotationSource.AUTOPILOT),
+            ManualChangeRow.from(RunAnnotation.HoldChange(280, 34.2, AnnotationSource.AUTOPILOT))
+        )
+    }
+
+    @Test
+    fun aReleaseRowIsItsOwnKindAndReturnsToTheSchedule() {
+        assertEquals(
+            ManualChangeRow("0:49", ManualChangeRow.Kind.RELEASE, "Hold released", "schedule"),
+            ManualChangeRow.from(RunAnnotation.HoldChange(null, 49.0))
+        )
+    }
+
+    @Test
+    fun everyRowKeepsTheSourceOfItsEvent() {
+        assertEquals(AnnotationSource.AGENT, ManualChangeRow.from(RunAnnotation.Mark("x", 1.0, AnnotationSource.AGENT)).source)
+        assertEquals(AnnotationSource.AUTOPILOT, ManualChangeRow.from(RunAnnotation.BiasChange(5, 5, 1.0, AnnotationSource.AUTOPILOT)).source)
+        assertEquals(AnnotationSource.USER, ManualChangeRow.from(RunAnnotation.Mark("x", 1.0)).source)
     }
 }

@@ -30,18 +30,63 @@ data class SnapMeta(
     val finalBias: Int? = null,
     val marks: List<SnapMark>? = null,
     @SerializedName("bias_events")
-    val biasEvents: List<SnapBiasEvent>? = null
+    val biasEvents: List<SnapBiasEvent>? = null,
+    @SerializedName("hold_events")
+    val holdEvents: List<SnapHoldEvent>? = null,
+    /** Who started the run ("user" or "agent"); absent when gg does not say. */
+    val origin: String? = null,
+    val autopilot: SnapAutopilot? = null
 )
 
+/** [source] is "user", "agent" or "autopilot"; absent means the user. */
 data class SnapMark(
     val label: String = "",
     @SerializedName("elapsed_s")
-    val elapsedSeconds: Double = 0.0
+    val elapsedSeconds: Double = 0.0,
+    val source: String? = null
 )
 
 data class SnapBiasEvent(
     val amount: Int = 0,
     val cumulative: Int = 0,
+    @SerializedName("elapsed_s")
+    val elapsedSeconds: Double = 0.0,
+    val source: String? = null
+)
+
+/** A hold pinning the rate at [rps], or the release of one when [released] is true. */
+data class SnapHoldEvent(
+    val rps: Int? = null,
+    val released: Boolean? = null,
+    @SerializedName("elapsed_s")
+    val elapsedSeconds: Double = 0.0,
+    val source: String? = null
+)
+
+/** What the built-in autopilot did during the run. */
+data class SnapAutopilot(
+    val mode: String = "",
+    val outcome: String? = null,
+    @SerializedName("ceiling_rps")
+    val ceilingRps: Int? = null,
+    val params: SnapAutopilotParams? = null,
+    val events: List<SnapAutopilotEvent>? = null
+)
+
+data class SnapAutopilotParams(
+    @SerializedName("max_p99_ms")
+    val maxP99Ms: Double? = null,
+    @SerializedName("max_error_rate")
+    val maxErrorRate: Double? = null
+)
+
+/** [elapsedSeconds] counts from the autopilot's own start, not the run's. */
+data class SnapAutopilotEvent(
+    val state: String = "",
+    val reason: String? = null,
+    @SerializedName("hold_rps")
+    val holdRps: Int? = null,
+    val outcome: String? = null,
     @SerializedName("elapsed_s")
     val elapsedSeconds: Double = 0.0
 )
