@@ -21,6 +21,17 @@ class GopherGlideSettings : PersistentStateComponent<GopherGlideSettings> {
     var lastUpdateCheckMillis: Long = 0L
     /** A release tag the user chose to ignore; a newer one is offered again. */
     var skippedGgVersion: String = ""
+    /** Set by "Don't Ask Again" on the offer to connect AI agents. */
+    var dontAskForAiAgents: Boolean = false
+    /** Run user-started simulations through the shared `gg mcp` daemon (needs gg v1.5.0+). */
+    var routeRunsThroughDaemon: Boolean = false
+    /** Start the shared daemon when a project opens, so MCP clients attach and agent runs show up. */
+    var startDaemonWithProject: Boolean = false
+    var daemonMaxRps: Int = 1000
+    var daemonMaxDurationMinutes: Int = 10
+    var daemonMaxAgentSessions: Int = 2
+    /** Comma-separated hosts agents may target; empty means the hosts found in the project's .http files. */
+    var daemonAllowHosts: String = ""
 
     override fun getState(): GopherGlideSettings = this
 

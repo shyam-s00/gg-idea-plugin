@@ -5,6 +5,7 @@ import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.ActionLink
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -79,6 +80,17 @@ class LiveControlPanel(
     private val steps = listOf(-10, -5, 5, 10).map { amount -> amount to button(formatSigned(amount)) { send(amount) } }
     private val resetButton = button("Reset") { state.resetAmount()?.let(::send) }
     private val markButton = button("Mark…") { dropMark() }
+    private var settingAgentSteer = false
+    private val agentSteerBox = JBCheckBox("🤖 Allow AI Steer").apply {
+        toolTipText = "AI agents can only read this run's telemetry unless this is checked."
+        isFocusable = false
+        addActionListener { if (!settingAgentSteer) toggleAgentSteer(isSelected) }
+    }
+    private val agentSteerRow = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
+        isOpaque = false
+        isVisible = false
+        add(agentSteerBox)
+    }
     private val holdBadge = JBLabel().apply {
         isOpaque = true
         font = font.deriveFont(Font.BOLD)
@@ -154,6 +166,7 @@ class LiveControlPanel(
         info.add(hint)
         info.add(lastMark)
         strip.add(controlsRow, BorderLayout.NORTH)
+        strip.add(agentSteerRow, BorderLayout.CENTER)
         strip.add(info, BorderLayout.SOUTH)
     }
 
@@ -198,6 +211,8 @@ class LiveControlPanel(
         runActive = false
         marks.clear()
         lastTargetRps = null
+        setAgentSteerSelected(false)
+        agentSteerRow.isVisible = false
         installed = null
         latest = null
         installProgress = InstallProgress.IDLE
@@ -210,6 +225,7 @@ class LiveControlPanel(
 
     fun bind(controls: RunControls) {
         this.controls = controls
+        agentSteerRow.isVisible = controls.agentSteerSupported
         runActive = true
         refresh()
     }
@@ -305,6 +321,27 @@ class LiveControlPanel(
             else -> showFailure(reply)
         }
         refresh()
+    }
+
+    private fun toggleAgentSteer(allow: Boolean) {
+        val controls = controls ?: return
+        val sentWith = state
+        controls.setAgentSteer(allow) { reply ->
+            if (sentWith !== state) return@setAgentSteer
+            if (reply is ControlReply.Ack) {
+                showHint("")
+            } else {
+                setAgentSteerSelected(!allow)
+                showFailure(reply)
+            }
+            refresh()
+        }
+    }
+
+    private fun setAgentSteerSelected(value: Boolean) {
+        settingAgentSteer = true
+        agentSteerBox.isSelected = value
+        settingAgentSteer = false
     }
 
     private fun toggleHold() {
@@ -413,6 +450,7 @@ class LiveControlPanel(
     }
 
     private fun refresh() {
+        agentSteerBox.isEnabled = state.handshake == LiveControlState.Handshake.ACTIVE && !state.isOver
         val legacy = !beforeFirstRun && state.handshake == LiveControlState.Handshake.LEGACY
         val model = when {
             beforeFirstRun -> BinaryNotices.idle(installed, latest, installProgress)

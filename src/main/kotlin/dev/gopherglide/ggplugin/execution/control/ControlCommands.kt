@@ -18,6 +18,9 @@ sealed interface ControlCommand {
 
     data class Release(override val id: String) : ControlCommand
 
+    /** Lets AI agents steer the run (true) or leaves it read-only for them (false). */
+    data class AgentSteer(override val id: String, val allow: Boolean) : ControlCommand
+
     /** The limits are only meaningful for a start; null leaves gg's defaults. */
     data class Autopilot(
         override val id: String,
@@ -50,6 +53,10 @@ fun ControlCommand.toLine(): String {
             json.addProperty("rps", rps)
         }
         is ControlCommand.Release -> json.addProperty("command", "release")
+        is ControlCommand.AgentSteer -> {
+            json.addProperty("command", "agent_steer")
+            json.addProperty("allow", allow)
+        }
         is ControlCommand.Autopilot -> {
             json.addProperty("command", "autopilot")
             json.addProperty("action", action.wire)

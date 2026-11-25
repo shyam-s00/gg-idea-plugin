@@ -37,6 +37,14 @@ class LiveControlPanelTest : BasePlatformTestCase() {
             markTimes += elapsedSeconds
             markReplies += onReply
         }
+        var steerSupported = false
+        override val agentSteerSupported: Boolean get() = steerSupported
+        val steerCalls = mutableListOf<Boolean>()
+        val steerReplies = mutableListOf<(ControlReply) -> Unit>()
+        override fun setAgentSteer(allow: Boolean, onReply: (ControlReply) -> Unit) {
+            steerCalls += allow
+            steerReplies += onReply
+        }
         val holdsSent = mutableListOf<Int>()
         val holdReplies = mutableListOf<(ControlReply) -> Unit>()
         var releases = 0
@@ -834,5 +842,52 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         val tooltip = lastMarkLabel(panel)!!.toolTipText
         assertTrue(tooltip.indexOf("auto") < tooltip.indexOf("mine"))
         assertEquals("Last mark: “mine” at 0:40 · 2 marks", lastMarkLabel(panel)!!.text)
+    }
+
+    private fun steerBox(panel: LiveControlPanel) =
+        UIUtil.findComponentsOfType(panel, com.intellij.ui.components.JBCheckBox::class.java).first { it.text == "🤖 Allow AI Steer" }
+
+    fun testAllowAiSteerIsHiddenForARunThatCannotBeShared() {
+        val (panel, _) = active(capabilities = v15)
+        assertFalse(shown(panel, steerBox(panel)))
+    }
+
+    fun testAllowAiSteerAppearsOffForARunOnTheSharedDaemon() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        assertTrue(shown(panel, steerBox(panel)))
+        assertFalse(steerBox(panel).isSelected)
+    }
+
+    fun testTickingItLetsAgentsSteerAndUntickingTakesItBack() {
+        val (panel, controls) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        controls.steerReplies[0](ControlReply.Ack(HeartbeatPayload(event = "ack", command = "agent_steer")))
+        steerBox(panel).doClick()
+        controls.steerReplies[1](ControlReply.Ack(HeartbeatPayload(event = "ack", command = "agent_steer")))
+        assertEquals(listOf(true, false), controls.steerCalls)
+        assertFalse(steerBox(panel).isSelected)
+    }
+
+    fun testARefusedChangeRevertsTheBoxAndSaysWhy() {
+        val (panel, controls) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        assertTrue(steerBox(panel).isSelected)
+        controls.steerReplies[0](ControlReply.Rejected(HeartbeatPayload(event = "error", reason = "unknown_session", message = "unknown session_id")))
+        assertFalse(steerBox(panel).isSelected)
+        assertTrue(labels(panel).contains("gg rejected a command: unknown_session — unknown session_id"))
+    }
+
+    fun testANewRunStartsWithAgentsLockedOut() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        panel.reset()
+        assertFalse(steerBox(panel).isSelected)
+        assertFalse(shown(panel, steerBox(panel)))
+    }
+
+    fun testTheBoxIsDisabledOnceTheRunIsOver() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        panel.onEnded()
+        assertFalse(steerBox(panel).isEnabled)
     }
 }

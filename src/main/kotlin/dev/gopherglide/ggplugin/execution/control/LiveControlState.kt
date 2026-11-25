@@ -37,6 +37,9 @@ class LiveControlState {
 
     val displayedBias: Int get() = reportedBias + pending.values.sum()
 
+    /** True once a stop was asked for or the run ended. */
+    val isOver: Boolean get() = stopRequested || ended
+
     val autopilotActive: Boolean get() = autopilot != null
 
     val canBias: Boolean get() = usable(BIAS) && !autopilotActive

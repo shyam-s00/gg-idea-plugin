@@ -13,6 +13,7 @@ import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import java.awt.BorderLayout
+import java.awt.FlowLayout
 import java.awt.Color
 import java.awt.Font
 import java.awt.GridLayout
@@ -60,6 +61,15 @@ private class MetricCard(caption: String) : JPanel() {
  */
 class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : JPanel(BorderLayout()) {
     private val statusLabel = JBLabel("Idle")
+    private val originBadge = JBLabel().apply {
+        font = font.deriveFont(Font.BOLD)
+        foreground = JBColor(0x1F5FA8, 0x9ACBFA)
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(JBColor(0x8DBBE8, 0x3F6C96)), BorderFactory.createEmptyBorder(0, 6, 0, 6)
+        )
+        isVisible = false
+    }
+    private var knownBias = 0
     private val elapsedLabel = JBLabel("00:00")
     private val targetRpsCard = MetricCard("TARGET RPS")
     private val actualRpsCard = MetricCard("ACTUAL RPS")
@@ -86,7 +96,10 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
         elapsedLabel.foreground = JBColor.GRAY
 
         val statusRow = JPanel(BorderLayout())
-        statusRow.add(statusLabel, BorderLayout.CENTER)
+        val statusLine = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0))
+        statusLine.add(statusLabel)
+        statusLine.add(originBadge)
+        statusRow.add(statusLine, BorderLayout.CENTER)
         statusRow.add(elapsedLabel, BorderLayout.EAST)
         statusRow.border = BorderFactory.createEmptyBorder(0, 0, 8, 0)
 
@@ -117,6 +130,8 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
     /** Call before starting a new process — clears prior run's state. */
     fun reset() {
         runStartMs = 0L
+        knownBias = 0
+        showOrigin(null)
         annotations.clear()
         reachedTerminalState = false
         stoppedByRequest = false
@@ -147,6 +162,12 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
     /** Asks the process registered by [onProcessStarted] to stop. Called by [StopGopherGlideRunAction]. */
     fun stop() {
         controls?.requestStop()
+    }
+
+    /** Marks the run as started by someone other than the user; null clears the badge. */
+    fun showOrigin(source: AnnotationSource?) {
+        originBadge.text = if (source == AnnotationSource.AGENT) "🤖 STARTED BY AI AGENT" else ""
+        originBadge.isVisible = source == AnnotationSource.AGENT
     }
 
     fun onProcessStarted(controls: RunControls) {
@@ -225,14 +246,17 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
                 errorMixStrip.update(payload)
                 rpsChart.addDataPoint(elapsedSec.toDouble(), payload.actualRps, payload.targetRps)
                 stageTimeline.update(payload.stage, payload.totalStages, elapsedSec.toDouble())
-                payload.bias?.let { liveControl.onHeartbeat(it, payload.holdRps, payload.autopilot, payload.targetRps) }
+                payload.bias?.let {
+                    knownBias = it
+                    liveControl.onHeartbeat(it, payload.holdRps, payload.autopilot, payload.targetRps)
+                }
             }
             "autopilot" -> liveControl.onAutopilotEvent(payload.mode, payload.state)
-            "mark" -> if (payload.id == null) {
-                // A mark with an id answers one of ours; an id-less one is the autopilot's own.
+            "mark" -> if (!isOurs(payload)) {
                 val at = payload.elapsedSeconds ?: runElapsedSeconds()
                 liveControl.onUnsolicitedMark(payload.label.orEmpty().ifBlank { "mark" }, at, AnnotationSource.fromWire(payload.source))
             }
+            "ack" -> onAck(payload)
             "finished" -> {
                 setRunning(false)
                 reachedTerminalState = true
@@ -264,6 +288,29 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
             }
         }
     }
+
+    private fun isOurs(payload: HeartbeatPayload): Boolean = payload.id?.let { controls?.ownsCommand(it) } == true
+
+    /** An ack of ours only keeps the bias current; one from an agent or another writer also lands on the chart. */
+    private fun onAck(payload: HeartbeatPayload) {
+        val bias = payload.bias
+        val ours = isOurs(payload)
+        if (payload.command == "bias" && bias != null) {
+            val amount = bias - knownBias
+            knownBias = bias
+            if (!ours && amount != 0) {
+                addAnnotation(RunAnnotation.BiasChange(amount, bias, atOf(payload), AnnotationSource.fromWire(payload.source)))
+            }
+        }
+        if (ours) return
+        val source = AnnotationSource.fromWire(payload.source)
+        when (payload.command) {
+            "hold" -> addAnnotation(RunAnnotation.HoldChange(payload.holdRps, atOf(payload), source))
+            "release" -> addAnnotation(RunAnnotation.HoldChange(null, atOf(payload), source))
+        }
+    }
+
+    private fun atOf(payload: HeartbeatPayload) = payload.elapsedSeconds ?: runElapsedSeconds()
 
     private fun showWindowHealth(payload: HeartbeatPayload, window: WindowHealthPayload) {
         errorRateCard.toolTipText = "Cumulative: %.2f%% · Last %ds: %.2f%% (%d samples)"

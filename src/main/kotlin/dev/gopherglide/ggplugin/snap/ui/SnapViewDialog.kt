@@ -33,10 +33,10 @@ class SnapViewDialog(private val project: Project, private val snap: SnapModel) 
 
     override fun createLeftSideActions(): Array<Action> = arrayOf(
         object : AbstractAction("📄 Export Mission Report…") {
-            override fun actionPerformed(e: ActionEvent) = SnapReportActions.export(project, snap)
+            override fun actionPerformed(e: ActionEvent) = SnapReportActions.export(project, snap, contentPane)
         },
         object : AbstractAction("Copy PR Markdown") {
-            override fun actionPerformed(e: ActionEvent) = SnapReportActions.copyMarkdown(project, snap)
+            override fun actionPerformed(e: ActionEvent) = SnapReportActions.copyMarkdown(project, snap, contentPane)
         }
     )
 

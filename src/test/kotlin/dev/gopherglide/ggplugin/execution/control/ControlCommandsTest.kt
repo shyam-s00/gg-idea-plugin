@@ -61,6 +61,12 @@ class ControlCommandsTest {
     }
 
     @Test
+    fun agentSteerMatchesTheWireForm() {
+        assertEquals("""{"id":"g1","command":"agent_steer","allow":true}""", ControlCommand.AgentSteer("g1", true).toLine())
+        assertEquals("""{"id":"g2","command":"agent_steer","allow":false}""", ControlCommand.AgentSteer("g2", false).toLine())
+    }
+
+    @Test
     fun stopMatchesTheDocumentedWireForm() {
         assertEquals("""{"id":"c4","command":"stop"}""", ControlCommand.Stop("c4").toLine())
     }

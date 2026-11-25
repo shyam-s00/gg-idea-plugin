@@ -7,8 +7,11 @@ import com.intellij.openapi.ui.TextBrowseFolderListener
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.openapi.project.ProjectManager
+import dev.gopherglide.ggplugin.mcp.GgMcpDaemonService
 import dev.gopherglide.ggplugin.services.BinaryManager
 import dev.gopherglide.ggplugin.services.BinaryStatus
 import java.awt.Toolkit
@@ -26,6 +29,12 @@ class GopherGlideConfigurable : Configurable {
     private var snapshotsDirField: TextFieldWithBrowseButton? = null
     private var heartbeatIntervalSpinner: JBIntSpinner? = null
     private var updateCheckBox: JBCheckBox? = null
+    private var routeBox: JBCheckBox? = null
+    private var startDaemonBox: JBCheckBox? = null
+    private var maxRpsSpinner: JBIntSpinner? = null
+    private var maxDurationSpinner: JBIntSpinner? = null
+    private var maxSessionsSpinner: JBIntSpinner? = null
+    private var allowHostsField: JBTextField? = null
 
     override fun getDisplayName(): String = "Gopher Glide"
 
@@ -49,6 +58,19 @@ class GopherGlideConfigurable : Configurable {
 
         val updateBox = JBCheckBox("Check for gg updates on startup")
         updateCheckBox = updateBox
+
+        val routeCheck = JBCheckBox("Run my simulations through the shared daemon")
+        val startCheck = JBCheckBox("Start the shared daemon when a project opens")
+        val rpsSpinner = JBIntSpinner(1000, 1, 1_000_000)
+        val durationSpinner = JBIntSpinner(10, 1, 24 * 60)
+        val sessionsSpinner = JBIntSpinner(2, 1, 20)
+        val hostsField = JBTextField()
+        routeBox = routeCheck
+        startDaemonBox = startCheck
+        maxRpsSpinner = rpsSpinner
+        maxDurationSpinner = durationSpinner
+        maxSessionsSpinner = sessionsSpinner
+        allowHostsField = hostsField
 
         var statusLabel: JLabel? = null
         var versionLabel: JLabel? = null
@@ -144,6 +166,31 @@ class GopherGlideConfigurable : Configurable {
                 }.also { checkButton = it.component }
 
                 statusLabel = label("").component
+            }
+
+            group("Shared daemon (gg v1.5.0+)") {
+                row {
+                    label("One gg process per project that the IDE and AI agents share, so an agent's runs appear in the Run tab.")
+                }
+                row { cell(routeCheck) }
+                row {
+                    label("Off by default. Takes effect on the next run; if the daemon cannot start, the run goes ahead directly.")
+                }
+                row { cell(startCheck) }
+                row("Agent limits:") {
+                    label("max RPS")
+                    cell(rpsSpinner)
+                    label("max duration")
+                    cell(durationSpinner)
+                    label("min, runs at once")
+                    cell(sessionsSpinner)
+                }
+                row("Hosts agents may target:") {
+                    cell(hostsField).align(AlignX.FILL)
+                }
+                row {
+                    label("Comma-separated. Empty uses the hosts in this project's .http files, or any host if one can't be read. Your own runs are never limited.")
+                }
             }
 
             row {
@@ -247,7 +294,13 @@ class GopherGlideConfigurable : Configurable {
         return binaryPathField?.text != settings.customBinaryPath ||
                snapshotsDirField?.text != settings.customSnapshotsDir ||
                heartbeatIntervalSpinner?.number != settings.heartbeatIntervalSeconds ||
-               updateCheckBox?.isSelected != settings.checkForUpdatesOnStartup
+               updateCheckBox?.isSelected != settings.checkForUpdatesOnStartup ||
+               routeBox?.isSelected != settings.routeRunsThroughDaemon ||
+               startDaemonBox?.isSelected != settings.startDaemonWithProject ||
+               maxRpsSpinner?.number != settings.daemonMaxRps ||
+               maxDurationSpinner?.number != settings.daemonMaxDurationMinutes ||
+               maxSessionsSpinner?.number != settings.daemonMaxAgentSessions ||
+               allowHostsField?.text != settings.daemonAllowHosts
     }
 
     override fun apply() {
@@ -256,7 +309,25 @@ class GopherGlideConfigurable : Configurable {
         settings.customSnapshotsDir = snapshotsDirField?.text ?: ""
         settings.heartbeatIntervalSeconds = heartbeatIntervalSpinner?.number ?: 0
         settings.checkForUpdatesOnStartup = updateCheckBox?.isSelected ?: true
+        settings.routeRunsThroughDaemon = routeBox?.isSelected ?: false
+        settings.startDaemonWithProject = startDaemonBox?.isSelected ?: false
+        settings.daemonMaxRps = maxRpsSpinner?.number ?: 1000
+        settings.daemonMaxDurationMinutes = maxDurationSpinner?.number ?: 10
+        settings.daemonMaxAgentSessions = maxSessionsSpinner?.number ?: 2
+        settings.daemonAllowHosts = allowHostsField?.text.orEmpty()
         BinaryStatus.instance.notifyChanged()
+        applyDaemonSettings(settings)
+    }
+
+    /** A running daemon restarts when its settings changed and it is idle; one is started where the user asked for it. */
+    private fun applyDaemonSettings(settings: GopherGlideSettings) {
+        ProjectManager.getInstance().openProjects.forEach { project ->
+            val daemon = project.getServiceIfCreated(GgMcpDaemonService::class.java)
+            when {
+                daemon != null && daemon.state == GgMcpDaemonService.State.RUNNING -> daemon.ensureRunning()
+                settings.startDaemonWithProject -> GgMcpDaemonService.getInstance(project).ensureRunning()
+            }
+        }
     }
 
     override fun reset() {
@@ -265,6 +336,12 @@ class GopherGlideConfigurable : Configurable {
         snapshotsDirField?.text = settings.customSnapshotsDir
         heartbeatIntervalSpinner?.number = settings.heartbeatIntervalSeconds
         updateCheckBox?.isSelected = settings.checkForUpdatesOnStartup
+        routeBox?.isSelected = settings.routeRunsThroughDaemon
+        startDaemonBox?.isSelected = settings.startDaemonWithProject
+        maxRpsSpinner?.number = settings.daemonMaxRps
+        maxDurationSpinner?.number = settings.daemonMaxDurationMinutes
+        maxSessionsSpinner?.number = settings.daemonMaxAgentSessions
+        allowHostsField?.text = settings.daemonAllowHosts
     }
 
     override fun disposeUIResources() {
@@ -273,5 +350,11 @@ class GopherGlideConfigurable : Configurable {
         snapshotsDirField = null
         heartbeatIntervalSpinner = null
         updateCheckBox = null
+        routeBox = null
+        startDaemonBox = null
+        maxRpsSpinner = null
+        maxDurationSpinner = null
+        maxSessionsSpinner = null
+        allowHostsField = null
     }
 }

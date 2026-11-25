@@ -90,6 +90,19 @@ Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to 
 
 The generated config path is pre-filled from the first `.gg.yaml` found in the project, and you're prompted before it overwrites an existing `gg.yml`.
 
+### 🤖 AI agents (gg v1.5.0+)
+
+**Tools → Connect AI Agents to Gopher Glide…**, or the **AI Agents** button in the Run tab, connects Claude Code, Cursor, Junie, JetBrains AI Assistant and JetBrains Air to gg, so a run an agent starts shows up live in the Run tab like one of yours.
+
+- **One dialog, nothing silent.** It shows what is linked now (the shared daemon, `.mcp.json`, the agent skill, Air), previews every change (`Preview changes…`), and writes only what you tick. Files are written by `gg mcp init`, which keeps your other servers and agents and never overwrites an entry of your own unless you choose **Replace**. A broken JSON file is reported and left alone.
+- **Workspace `.mcp.json`** gets a `gg` server that attaches to the IDE's daemon (`gg mcp --attach`), so agent runs are visible and steerable here. gg's own default entry starts a private server instead, which the IDE never sees; the dialog upgrades it. When the entry holds a full path to gg, the dialog offers to keep `.mcp.json` out of git.
+- **Agent skill** (`.claude/skills/gg/SKILL.md`) teaches agents the workflow. It is never overwritten once you have edited it.
+- **JetBrains Air**: registers `gg autopilot` in `~/.jetbrains/acp.json` through a small launcher in `~/.jetbrains/gopher-glide/` that connects the agent to your project's daemon when it is running. Its slash commands (`/dry-run`, `/find-ceiling`, `/slo-guard`, `/triage`) need no API key; an optional section takes a Gemini key or an OpenAI-compatible server for open-ended questions (kept in a file only you can read).
+- **In the Run tab:** an agent's run opens with a **🤖 STARTED BY AI AGENT** badge, and its marks, bias steps and holds appear on the chart with a 🤖 prefix. If you are mid-run, it waits and takes the tab when yours ends. **Stop** and the live controls work on it too.
+- **Your runs stay yours.** AI agents can read a run you started but not steer it until you tick **🤖 Allow AI Steer** (off for every new run).
+- **Limits for agents** (max RPS, max duration, runs at once, and which hosts they may target) are in the dialog and in **Settings → Gopher Glide → Shared daemon**. By default agents may only target the hosts found in this project's `.http` files; your own runs are never limited.
+- The shared daemon is one gg process per project. It starts when you open a connected project (or on your first routed run), and it stops with the IDE. Turn on **Run my simulations through the shared daemon** in Settings to put your own runs through it as well (off by default; a run that can't use it simply runs directly).
+
 ### 📄 Scaffold a new test file
 
 **File → New → Add GG http file** creates a `.http` file pre-filled with a sample request and a cheat sheet of all built-in gg profiles in a comment header.
@@ -119,7 +132,7 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 
 - **IntelliJ Platform baseline:** `2024.2` (`sinceBuild = 242`)
 - **Live control:** needs `gg` v1.3.0 or newer; older versions run as before, without the controls
-- **Hold, Autopilot, click-time marks, window health and mission reports:** need `gg` v1.5.0 or newer; the plugin offers to install it when you ask for one of them on an older binary
+- **Hold, Autopilot, click-time marks, window health, mission reports and AI agents:** need `gg` v1.5.0 or newer; the plugin offers to install it when you ask for one of them on an older binary
 - **Build target:** IntelliJ IDEA Community `2024.2.4`
 - **Developer toolchain:** JDK 21
 
@@ -174,6 +187,12 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` an
 2. Use **+5 / +10 / −5 / −10** to raise or lower the load and **Reset** to go back to the plan. With gg v1.5.0+, **Hold RPS** pins the rate instead.
 3. Click **Mark…**, type a label and confirm, to note an event such as a deploy.
 4. Click **Stop** when you are done. With snapshot recording on, the snapshot is saved before the run ends.
+
+### Connect an AI agent
+
+1. Choose **Tools → Connect AI Agents to Gopher Glide…** (or click **AI Agents** in the Run tab).
+2. Tick what to set up, check **Preview changes…** if you like, and click **Apply**. Restart your AI agent, or the IDE for Air, to pick it up.
+3. Ask the agent to run a simulation. It appears in the **Run** tab with a 🤖 badge. To let it steer a run you started, tick **🤖 Allow AI Steer** in the Live Control strip.
 
 ### Find your system's ceiling
 

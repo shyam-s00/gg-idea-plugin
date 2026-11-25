@@ -3,6 +3,7 @@ package dev.gopherglide.ggplugin.startup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import dev.gopherglide.ggplugin.ai.AiStartup
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import dev.gopherglide.ggplugin.services.BinaryManager
 import dev.gopherglide.ggplugin.services.UpdateChecker
@@ -10,6 +11,7 @@ import dev.gopherglide.ggplugin.settings.GopherGlideSettings
 
 class GopherGlideStartupActivity : ProjectActivity {
     override suspend fun execute(project: Project) {
+        AiStartup.onProjectOpened(project)
         UpdateChecker.instance.checkOnStartup(project)
         if (GopherGlideSettings.instance.dontAskForMissingBinary) return
 

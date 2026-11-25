@@ -5,6 +5,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
+import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
 import dev.gopherglide.ggplugin.execution.control.ControlReply
 import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.execution.control.StopPhase
@@ -187,6 +189,94 @@ class GopherGlideRunPanelRoutingTest : BasePlatformTestCase() {
         val panel = runningPanel()
         panel.update(parse("""{"event":"finished","message":"Load test completed"}"""))
         assertTrue(labels(panel).contains("✓ FINISHED — Traffic simulation completed"))
+    }
+
+    /** Controls that did not send these ids, like a run shared with an agent. */
+    private class SharedControls : RunControls {
+        val mine = mutableSetOf<String>()
+        override fun ownsCommand(id: String) = id in mine
+        override fun requestStop() {}
+        override fun sendBias(amount: Int, onReply: (ControlReply) -> Unit) {}
+        override fun sendMark(label: String, elapsedSeconds: Double?, onReply: (ControlReply) -> Unit) {}
+        override fun sendHold(rps: Int, onReply: (ControlReply) -> Unit) {}
+        override fun sendRelease(onReply: (ControlReply) -> Unit) {}
+        override fun startAutopilot(mode: String, maxP99Ms: Int?, maxErrorRate: Double?, onReply: (ControlReply) -> Unit) {}
+        override fun stopAutopilot(onReply: (ControlReply) -> Unit) {}
+        override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) {}
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun notes(panel: GopherGlideRunPanel) =
+        GopherGlideRunPanel::class.java.getDeclaredField("annotations").apply { isAccessible = true }.get(panel) as List<RunAnnotation>
+
+    private fun sharedPanel(controls: SharedControls = SharedControls()) =
+        GopherGlideRunPanel().also { it.onProcessStarted(controls) }
+
+    fun testAnAgentsMarkIsShownEvenThoughItCarriesAnId() {
+        val panel = sharedPanel()
+        panel.update(parse("""{"event":"mark","id":"c1","label":"agent-mark","elapsed_s":4.5,"source":"agent"}"""))
+        assertTrue(labels(panel).any { it.startsWith("Last mark: “🤖 agent-mark” at 0:04") })
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.Mark("agent-mark", 4.5, AnnotationSource.AGENT)), notes(panel))
+    }
+
+    fun testAMarkWeSentIsLeftToItsOwnReply() {
+        val controls = SharedControls().apply { mine += "m1" }
+        val panel = sharedPanel(controls)
+        panel.update(parse("""{"event":"mark","id":"m1","label":"mine","elapsed_s":4.5,"source":"user"}"""))
+        assertTrue(notes(panel).isEmpty())
+    }
+
+    fun testAnAgentsBiasStepShowsWithTheAmountItAdded() {
+        val panel = sharedPanel()
+        panel.update(parse("""{"event":"heartbeat","bias":10,"elapsed_s":3.0,"stage":1,"total_stages":1}"""))
+        panel.update(parse("""{"event":"ack","id":"c2","command":"bias","bias":15,"elapsed_s":4.0,"source":"agent"}"""))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.BiasChange(5, 15, 4.0, AnnotationSource.AGENT)), notes(panel))
+    }
+
+    fun testOurOwnBiasAckKeepsTheBaselineForTheNextAgentStep() {
+        val controls = SharedControls().apply { mine += "b1" }
+        val panel = sharedPanel(controls)
+        panel.update(parse("""{"event":"ack","id":"b1","command":"bias","bias":10,"elapsed_s":2.0}"""))
+        assertTrue(notes(panel).isEmpty())
+        panel.update(parse("""{"event":"ack","id":"c1","command":"bias","bias":20,"elapsed_s":3.0,"source":"agent"}"""))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.BiasChange(10, 20, 3.0, AnnotationSource.AGENT)), notes(panel))
+    }
+
+    fun testAnAgentsHoldAndReleaseAreShown() {
+        val panel = sharedPanel()
+        panel.update(parse("""{"event":"ack","id":"c1","command":"hold","hold_rps":40,"elapsed_s":5.0,"source":"agent"}"""))
+        panel.update(parse("""{"event":"ack","id":"c2","command":"release","elapsed_s":9.0,"source":"agent"}"""))
+        assertEquals(
+            listOf<RunAnnotation>(
+                RunAnnotation.HoldChange(40, 5.0, AnnotationSource.AGENT),
+                RunAnnotation.HoldChange(null, 9.0, AnnotationSource.AGENT)
+            ),
+            notes(panel)
+        )
+    }
+
+    fun testAcksForOtherCommandsAddNothing() {
+        val panel = sharedPanel()
+        panel.update(parse("""{"event":"ack","id":"stop","command":"stop","elapsed_s":5.0}"""))
+        panel.update(parse("""{"event":"ack","id":"c3","command":"autopilot","mode":"slo-guard","elapsed_s":5.0,"source":"agent"}"""))
+        assertTrue(notes(panel).isEmpty())
+    }
+
+    fun testAnUnchangedBiasAckAddsNoTick() {
+        val panel = sharedPanel()
+        panel.update(parse("""{"event":"ack","id":"c1","command":"bias","bias":0,"elapsed_s":1.0,"source":"agent"}"""))
+        assertTrue(notes(panel).isEmpty())
+    }
+
+    fun testTheOriginBadgeShowsForAnAgentRunAndClearsOnTheNextRun() {
+        val panel = sharedPanel()
+        panel.showOrigin(AnnotationSource.AGENT)
+        assertTrue(labels(panel).contains("🤖 STARTED BY AI AGENT"))
+        panel.showOrigin(null)
+        assertTrue(labels(panel).none { it.contains("STARTED BY AI AGENT") })
+        panel.showOrigin(AnnotationSource.AGENT)
+        panel.reset()
+        assertTrue(labels(panel).none { it.contains("STARTED BY AI AGENT") })
     }
 
     fun testFinishedAfterInterruptedKeepsTheStoppedStatus() {

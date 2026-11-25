@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "7.0.0"
+version = project.findProperty("pluginVersion") ?: "7.9.0"
 
 repositories {
     mavenCentral()
@@ -35,6 +35,13 @@ intellijPlatform {
         }
 
         changeNotes = """
+            <b>AI agents on the shared daemon (needs gg v1.5.0+)</b><br>
+            <ul>
+            <li><b>Connect AI agents</b> — one dialog (Tools menu, or the AI Agents button in the Run tab) links Claude Code, Cursor, Junie, JetBrains AI Assistant and JetBrains Air. It shows what is linked, previews every change, keeps your other servers and agents, and never overwrites an entry of yours unless you choose Replace.</li>
+            <li><b>Agent runs show live</b> — a run an agent starts opens in the Run tab with a badge; its marks, bias steps and holds appear on the chart. A run that starts while you are mid-run waits for yours to end.</li>
+            <li><b>Your runs stay yours</b> — agents can read them but cannot steer them until you tick Allow AI Steer. Agents may only target the hosts in your project's .http files unless you say otherwise.</li>
+            <li><b>Optional</b> — run your own simulations through the shared daemon too (Settings → Gopher Glide → Shared daemon).</li>
+            </ul>
             <b>Autopilot, rate hold and shareable reports (needs gg v1.5.0+)</b><br>
             <ul>
             <li><b>Find your ceiling</b> — pick <i>Autopilot: Find Ceiling…</i> at the top of the profile picker. gg steps the rate up while health holds, marks the breach, confirms the rate it backs off to, and reports the highest sustainable RPS. No LLM involved.</li>

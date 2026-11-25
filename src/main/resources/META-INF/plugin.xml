@@ -18,6 +18,7 @@
         <li><b>Autopilot</b> — with gg v1.5.0+, find the highest sustainable RPS with one click, guard a run against an SLO breach, pin the rate with Hold, and see the autopilot's outcome and every change in the snapshot. No LLM involved.</li>
         <li><b>Live control</b> — with gg v1.3.0+, raise or lower the target RPS and drop named marks while a run is going. Bias changes and marks show on the chart, Stop keeps the snapshot, and the changes are recorded in the snapshot.</li>
         <li><b>Native snapshot workflow</b> — a master-detail Snapshot View and Diff, with the marks and bias changes made during a run, an inferred JSON schema tree (real type icons, presence %, stability), a status-code distribution chart, and profile-aware comparisons that warn when two snapshots aren't apples-to-apples. The diff view shows a full schema diff (added/removed/changed fields) alongside delta-formatted endpoint metrics. Run <code>gg snap assert</code> to gate regressions, and prune old snapshots by ID, tag, or age — entirely inside the tool window, no terminal involved.</li>
+        <li><b>AI agents</b> — with gg v1.5.0+, connect Claude Code, Cursor, Junie, JetBrains AI Assistant and JetBrains Air in one dialog. Runs an agent starts show live in the Run tab with a badge, and agents can only steer your runs when you allow it.</li>
         <li><b>Shareable reports</b> — with gg v1.5.0+, export a snapshot's mission report as Markdown or HTML, or copy it as Markdown for a pull request.</li>
         <li><b>One-click CI workflow generator</b> — scaffold a ready-to-run GitHub Actions workflow that snaps a headless run, asserts it against your main-branch baseline, and posts the result as a PR comment.</li>
         <li><b>Schema-validated config</b> — JSON Schema completion and validation for <code>.gg.yaml</code> files, covering stages, snapshot tuning, and built-in profiles.</li>
@@ -68,6 +69,10 @@
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>
 
+        <action id="GopherGlide.ConfigureAiAgents" class="dev.gopherglide.ggplugin.ai.ConfigureAiAgentsAction" text="Connect AI Agents to Gopher Glide…" description="Link Claude Code, Cursor, Junie, JetBrains AI Assistant and JetBrains Air so their gg runs show live in the Run tab" icon="AllIcons.Nodes.Plugin">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+
         <action id="GopherGlide.NewHttpTest" class="dev.gopherglide.ggplugin.scaffold.CreateGopherGlideTestAction"
                 text="Add GG http file" description="Create a new .http file pre-filled with a sample request and the gg profile cheat sheet"
                 icon="AllIcons.Actions.AddFile">
@@ -94,6 +99,11 @@
 
             <!-- CI -->
             <reference id="GopherGlide.GenerateCiWorkflow"/>
+
+            <separator/>
+
+            <!-- AI -->
+            <reference id="GopherGlide.ConfigureAiAgents"/>
         </group>
     </actions>
 </idea-plugin>
