@@ -16,7 +16,7 @@ jobs:
       matrix:
         ide:
           - IC # IDEA Community
-          - PC # PyCharm Community
+          - PC # PyCharm
           - RD # Rider
           - GO # GoLand
           - WS # WebStorm

@@ -187,7 +187,7 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 | GoLand | ✅ |
 | WebStorm | ✅ |
 | Rider | ✅ |
-| PyCharm Community | ✅ |
+| PyCharm | ✅ |
 | PhpStorm | ✅ |
 | RubyMine | ✅ |
 
