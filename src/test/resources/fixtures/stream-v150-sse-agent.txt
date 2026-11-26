@@ -1,0 +1,40 @@
+: connected
+
+event: snap
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:34:58Z","event":"snap","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"📸 Snapping → /work/snapsD"}}
+
+event: started
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:34:58Z","event":"started","stage":0,"total_stages":2,"stages":[{"name":"Spike","duration_seconds":0,"target_rps":10},{"name":"Sustain","duration_seconds":25,"target_rps":10}],"profile":"smoke","profile_scale":1,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"Load test started — profile=smoke (scale=1.00) — 2 stage(s)","protocol_version":1,"capabilities":["control.bias","control.mark","control.mark.elapsed","control.stop","control.hold","control.autopilot"]}}
+
+event: heartbeat
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:34:59Z","event":"heartbeat","stage":2,"total_stages":2,"target_rps":10,"actual_rps":10,"total_requests":20,"success_count":20,"failure_count":0,"error_rate":0,"p50_ms":0.40606200000000003,"p95_ms":1.14624795,"p99_ms":1.19751679,"bias":0,"elapsed_s":1.000618083,"window":{"seconds":1,"p99_ms":1.19751679,"error_rate":0,"samples":20}}}
+
+event: heartbeat
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:00Z","event":"heartbeat","stage":2,"total_stages":2,"target_rps":10,"actual_rps":15,"total_requests":30,"success_count":30,"failure_count":0,"error_rate":0,"p50_ms":0.480854,"p95_ms":1.17997745,"p99_ms":1.5492106099999998,"bias":0,"elapsed_s":2.000612125,"window":{"seconds":2,"p99_ms":1.5492106099999998,"error_rate":0,"samples":30}}}
+
+event: mark
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:00Z","event":"mark","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"id":"c1","label":"agent-mark","elapsed_s":2.507793958,"source":"agent"}}
+
+event: ack
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:00Z","event":"ack","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"bias +5 applied (cumulative +5)","bias":5,"id":"c2","command":"bias","elapsed_s":2.509398291,"source":"agent"}}
+
+event: ack
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:00Z","event":"ack","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"hold 20 rps","id":"c3","command":"hold","elapsed_s":2.510486916,"hold_rps":20,"source":"agent"}}
+
+event: heartbeat
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:01Z","event":"heartbeat","stage":2,"total_stages":2,"target_rps":10,"actual_rps":10,"total_requests":40,"success_count":40,"failure_count":0,"error_rate":0,"p50_ms":0.5076665,"p95_ms":1.2188818499999998,"p99_ms":1.5681547399999998,"bias":5,"elapsed_s":3.000602625,"window":{"seconds":3,"p99_ms":1.5681547399999998,"error_rate":0,"samples":40},"hold_rps":20}}
+
+event: heartbeat
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:02Z","event":"heartbeat","stage":2,"total_stages":2,"target_rps":20,"actual_rps":15,"total_requests":60,"success_count":60,"failure_count":0,"error_rate":0,"p50_ms":0.659958,"p95_ms":1.3840639499999998,"p99_ms":1.65446228,"bias":5,"elapsed_s":4.000519208,"window":{"seconds":4,"p99_ms":1.65446228,"error_rate":0,"samples":60},"hold_rps":20}}
+
+event: ack
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:02Z","event":"ack","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"hold released","id":"c4","command":"release","elapsed_s":4.013627333,"source":"agent"}}
+
+event: ack
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:02Z","event":"ack","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":0,"success_count":0,"failure_count":0,"error_rate":0,"p50_ms":0,"p95_ms":0,"p99_ms":0,"message":"stop received","id":"stop","command":"stop","elapsed_s":4.015804541}}
+
+event: stopped
+data: {"session_id":"sim_1efa05b1c537","origin":"agent","lcp":{"time":"2026-11-24T22:35:02Z","event":"stopped","stage":0,"total_stages":0,"target_rps":0,"actual_rps":0,"total_requests":61,"success_count":61,"failure_count":0,"error_rate":0,"p50_ms":0.664625,"p95_ms":1.4367499999999995,"p99_ms":1.6539001999999998,"message":"✓ Snapshot saved → /work/snapsD/agentrun-20261124-223502.snap","elapsed_s":4.015842083}}
+
+: ping
+

@@ -2,6 +2,8 @@ package dev.gopherglide.ggplugin.execution
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.ValidationInfo
+import dev.gopherglide.ggplugin.execution.autopilot.SloGuardPanel
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
@@ -10,13 +12,17 @@ import javax.swing.JComponent
 
 /**
  * Dialog for the profile-driven "Run GG" flow: optional `--peak-rps`/`--duration` overrides
- * (pre-filled with the profile defaults; an unchanged field adds no flag) and an optional snapshot
- * via the shared [SnapOptionsPanel].
+ * (pre-filled with the profile defaults; an unchanged field adds no flag), an optional SLO guard and
+ * an optional snapshot via the shared [SnapOptionsPanel].
  */
 class TrafficPopup(project: Project, private val profile: GgProfile) : DialogWrapper(project) {
     private val peakRpsField = JBTextField(profile.defaultPeakRps.toString())
     private val durationField = JBTextField(profile.defaultDuration)
     private val snapOptions = SnapOptionsPanel()
+    private val sloGuard = SloGuardPanel()
+
+    /** The `--autopilot slo-guard` flags when the guard is on, else empty. */
+    val sloGuardArgs: List<String> get() = sloGuard.args
 
     val peakRpsOverride: Int?
         get() = peakRpsField.text.trim()
@@ -46,8 +52,12 @@ class TrafficPopup(project: Project, private val profile: GgProfile) : DialogWra
             .addLabeledComponent("Duration (--duration):", durationField)
             .addVerticalGap(8)
 
+        sloGuard.addTo(formBuilder)
+        formBuilder.addVerticalGap(8)
         snapOptions.addTo(formBuilder)
 
         return formBuilder.panel
     }
+
+    override fun doValidate(): ValidationInfo? = sloGuard.validate()
 }

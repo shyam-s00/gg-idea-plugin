@@ -4,12 +4,16 @@ import com.intellij.ide.ActivityTracker
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
+import dev.gopherglide.ggplugin.execution.WindowHealthPayload
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
+import dev.gopherglide.ggplugin.execution.autopilot.AutopilotOutcomes
 import dev.gopherglide.ggplugin.execution.control.BinaryActions
 import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.execution.control.StopPhase
 import dev.gopherglide.ggplugin.notifications.GopherGlideNotifications
 import java.awt.BorderLayout
+import java.awt.FlowLayout
 import java.awt.Color
 import java.awt.Font
 import java.awt.GridLayout
@@ -57,12 +61,22 @@ private class MetricCard(caption: String) : JPanel() {
  */
 class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : JPanel(BorderLayout()) {
     private val statusLabel = JBLabel("Idle")
+    private val originBadge = JBLabel().apply {
+        font = font.deriveFont(Font.BOLD)
+        foreground = JBColor(0x1F5FA8, 0x9ACBFA)
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(JBColor(0x8DBBE8, 0x3F6C96)), BorderFactory.createEmptyBorder(0, 6, 0, 6)
+        )
+        isVisible = false
+    }
+    private var knownBias = 0
     private val elapsedLabel = JBLabel("00:00")
     private val targetRpsCard = MetricCard("TARGET RPS")
     private val actualRpsCard = MetricCard("ACTUAL RPS")
     private val errorRateCard = MetricCard("ERROR RATE")
     private val totalReqsCard = MetricCard("TOTAL REQUESTS")
     private val latencyCard = MetricCard("P50 / P95 / P99 (ms)")
+    private val errorMixStrip = ErrorMixStrip()
     private val rpsChart = RpsChartComponent()
     private val stageTimeline = StageTimelineComponent()
     private var runStartMs = 0L
@@ -82,7 +96,10 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
         elapsedLabel.foreground = JBColor.GRAY
 
         val statusRow = JPanel(BorderLayout())
-        statusRow.add(statusLabel, BorderLayout.CENTER)
+        val statusLine = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0))
+        statusLine.add(statusLabel)
+        statusLine.add(originBadge)
+        statusRow.add(statusLine, BorderLayout.CENTER)
         statusRow.add(elapsedLabel, BorderLayout.EAST)
         statusRow.border = BorderFactory.createEmptyBorder(0, 0, 8, 0)
 
@@ -93,9 +110,13 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
         cardsRow.add(totalReqsCard)
         cardsRow.add(latencyCard)
 
+        val cardsColumn = JPanel(BorderLayout(0, 6))
+        cardsColumn.add(cardsRow, BorderLayout.NORTH)
+        cardsColumn.add(errorMixStrip, BorderLayout.CENTER)
+
         val header = JPanel(BorderLayout())
         header.add(statusRow, BorderLayout.NORTH)
-        header.add(cardsRow, BorderLayout.CENTER)
+        header.add(cardsColumn, BorderLayout.CENTER)
         header.add(liveControl, BorderLayout.SOUTH)
         add(header, BorderLayout.NORTH)
 
@@ -109,6 +130,8 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
     /** Call before starting a new process — clears prior run's state. */
     fun reset() {
         runStartMs = 0L
+        knownBias = 0
+        showOrigin(null)
         annotations.clear()
         reachedTerminalState = false
         stoppedByRequest = false
@@ -123,6 +146,9 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
         errorRateCard.setValueColor(null)
         totalReqsCard.value = "—"
         latencyCard.value = "—"
+        errorRateCard.toolTipText = null
+        latencyCard.toolTipText = null
+        errorMixStrip.clear()
         rpsChart.clear()
         stageTimeline.clear()
     }
@@ -138,6 +164,12 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
         controls?.requestStop()
     }
 
+    /** Marks the run as started by someone other than the user; null clears the badge. */
+    fun showOrigin(source: AnnotationSource?) {
+        originBadge.text = if (source == AnnotationSource.AGENT) "🤖 STARTED BY AI AGENT" else ""
+        originBadge.isVisible = source == AnnotationSource.AGENT
+    }
+
     fun onProcessStarted(controls: RunControls) {
         this.controls = controls
         liveControl.bind(controls)
@@ -149,6 +181,7 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
 
     private fun addAnnotation(annotation: RunAnnotation) {
         annotations.add(annotation)
+        annotations.sortBy { it.elapsedSeconds }
         rpsChart.setAnnotations(annotations)
     }
 
@@ -196,6 +229,7 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
                 statusLabel.text = "● RUNNING — ${message.ifBlank { "Traffic simulation started" }}"
             }
             "heartbeat" -> {
+                payload.elapsedSeconds?.let { runStartMs = System.currentTimeMillis() - (it * 1000).toLong() }
                 val elapsedSec = runElapsedSeconds().toLong()
                 val profileSuffix = currentProfile?.let { " — profile: $it" } ?: ""
                 if (stopPhase == StopPhase.NONE) {
@@ -208,15 +242,27 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
                 errorRateCard.setValueColor(if (payload.errorRate > 0.0) JBColor.RED else null)
                 totalReqsCard.value = payload.totalRequests.toString()
                 latencyCard.value = "%.1f / %.1f / %.1f".format(payload.p50Ms, payload.p95Ms, payload.p99Ms)
+                payload.window?.let { showWindowHealth(payload, it) }
+                errorMixStrip.update(payload)
                 rpsChart.addDataPoint(elapsedSec.toDouble(), payload.actualRps, payload.targetRps)
                 stageTimeline.update(payload.stage, payload.totalStages, elapsedSec.toDouble())
-                payload.bias?.let(liveControl::onHeartbeat)
+                payload.bias?.let {
+                    knownBias = it
+                    liveControl.onHeartbeat(it, payload.holdRps, payload.autopilot, payload.targetRps)
+                }
             }
+            "autopilot" -> liveControl.onAutopilotEvent(payload.mode, payload.state)
+            "mark" -> if (!isOurs(payload)) {
+                val at = payload.elapsedSeconds ?: runElapsedSeconds()
+                liveControl.onUnsolicitedMark(payload.label.orEmpty().ifBlank { "mark" }, at, AnnotationSource.fromWire(payload.source))
+            }
+            "ack" -> onAck(payload)
             "finished" -> {
                 setRunning(false)
                 reachedTerminalState = true
                 if (!stoppedByRequest) {
-                    statusLabel.text = "✓ FINISHED — ${message.ifBlank { "Traffic simulation completed" }}"
+                    val outcome = AutopilotOutcomes.describe(payload.mode, payload.outcome, payload.ceilingRps)?.let { "$it · " }.orEmpty()
+                    statusLabel.text = "✓ FINISHED — $outcome${message.ifBlank { "Traffic simulation completed" }}"
                     GopherGlideNotifications.onSuccessfulAction()
                 }
             }
@@ -241,6 +287,35 @@ class GopherGlideRunPanel(binaryActions: BinaryActions = BinaryActions.None) : J
                 reachedTerminalState = true
             }
         }
+    }
+
+    private fun isOurs(payload: HeartbeatPayload): Boolean = payload.id?.let { controls?.ownsCommand(it) } == true
+
+    /** An ack of ours only keeps the bias current; one from an agent or another writer also lands on the chart. */
+    private fun onAck(payload: HeartbeatPayload) {
+        val bias = payload.bias
+        val ours = isOurs(payload)
+        if (payload.command == "bias" && bias != null) {
+            val amount = bias - knownBias
+            knownBias = bias
+            if (!ours && amount != 0) {
+                addAnnotation(RunAnnotation.BiasChange(amount, bias, atOf(payload), AnnotationSource.fromWire(payload.source)))
+            }
+        }
+        if (ours) return
+        val source = AnnotationSource.fromWire(payload.source)
+        when (payload.command) {
+            "hold" -> addAnnotation(RunAnnotation.HoldChange(payload.holdRps, atOf(payload), source))
+            "release" -> addAnnotation(RunAnnotation.HoldChange(null, atOf(payload), source))
+        }
+    }
+
+    private fun atOf(payload: HeartbeatPayload) = payload.elapsedSeconds ?: runElapsedSeconds()
+
+    private fun showWindowHealth(payload: HeartbeatPayload, window: WindowHealthPayload) {
+        errorRateCard.toolTipText = "Cumulative: %.2f%% · Last %ds: %.2f%% (%d samples)"
+            .format(payload.errorRate * 100, window.seconds, window.errorRate * 100, window.samples)
+        latencyCard.toolTipText = "Last %ds P99: %.1f ms (%d samples)".format(window.seconds, window.p99Ms, window.samples)
     }
 
     private fun rebrand(text: String): String =

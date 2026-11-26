@@ -146,6 +146,23 @@ class BinaryNoticesTest {
     }
 
     @Test
+    fun idleWithAV13OrV14BinaryHintsAtWhatV15Adds() {
+        listOf(GopherGlideVersion(1, 3, 0), GopherGlideVersion(1, 4, 2)).forEach { version ->
+            val notice = idle(binary(Source.SYSTEM, version = version))!!
+            assertEquals("Live Control available (gg $version)", notice.text)
+            assertEquals("gg v1.5.0 adds Autopilot, Rate Hold and click-time marks", notice.hint)
+            assertTrue(notice.quiet)
+        }
+    }
+
+    @Test
+    fun idleWithAV15BinaryHasNothingLeftToAdvertise() {
+        val notice = idle(binary(Source.SYSTEM, version = GopherGlideVersion(1, 5, 0)))!!
+        assertEquals("Live Control, Rate Hold and Autopilot available (gg v1.5.0)", notice.text)
+        assertNull(notice.hint)
+    }
+
+    @Test
     fun idleWithAnOlderBinaryShowsTheSameNoticeAsARunWould() {
         assertEquals(forRun(binary(Source.SYSTEM)), idle(binary(Source.SYSTEM)))
         assertEquals(forRun(binary(Source.CUSTOM)), idle(binary(Source.CUSTOM)))

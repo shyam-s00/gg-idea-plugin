@@ -8,7 +8,9 @@ import com.intellij.ui.table.JBTable
 import dev.gopherglide.ggplugin.snap.SnapDataManager
 import dev.gopherglide.ggplugin.snap.SnapModel
 import dev.gopherglide.ggplugin.snap.actions.AssertSnapsAction
+import dev.gopherglide.ggplugin.snap.actions.CopySnapReportMarkdownAction
 import dev.gopherglide.ggplugin.snap.actions.DiffSnapsAction
+import dev.gopherglide.ggplugin.snap.actions.ExportSnapReportAction
 import dev.gopherglide.ggplugin.snap.actions.PruneSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.RefreshSnapsAction
 import dev.gopherglide.ggplugin.snap.actions.ViewSnapAction
@@ -38,6 +40,8 @@ object SnapToolWindowFactory {
         actionGroup.add(ViewSnapAction())
         actionGroup.add(DiffSnapsAction())
         actionGroup.add(AssertSnapsAction())
+        actionGroup.add(ExportSnapReportAction())
+        actionGroup.add(CopySnapReportMarkdownAction())
         actionGroup.add(PruneSnapsAction())
 
         val toolbar = ActionManager.getInstance().createActionToolbar("GopherGlideSnapToolbar", actionGroup, true)

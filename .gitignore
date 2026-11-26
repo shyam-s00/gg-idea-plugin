@@ -44,3 +44,4 @@ bin/
 
 ### other non-important stuff
 ignore/**
+.run/**

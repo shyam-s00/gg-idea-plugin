@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "meta": {
+    "tag": "ceil",
+    "profile_scale": 1,
+    "start_time": "2026-11-23T22:38:18.412202-04:00",
+    "end_time": "2026-11-23T22:38:54.413675-04:00",
+    "peak_rps": 80,
+    "total_requests": 735,
+    "config_hash": "sha256:10637c18c03975df955dede0b1f0e5acfa79bb2504ddb4362baa0aa85e0591c4",
+    "snap_settings": {
+      "sample_rate": 0.05,
+      "max_samples": 200,
+      "max_body_kb": 0
+    },
+    "final_bias": 0,
+    "marks": [
+      {
+        "label": "Autopilot: ceiling breached at 35 RPS (p99=406ms \u003e 250ms); backing off to 28 RPS",
+        "elapsed_s": 31.001313417,
+        "source": "autopilot"
+      },
+      {
+        "label": "Autopilot: ceiling confirmed at 28 RPS",
+        "elapsed_s": 36.001390709,
+        "source": "autopilot"
+      }
+    ],
+    "autopilot": {
+      "mode": "find-ceiling",
+      "outcome": "ceiling_found",
+      "ceiling_rps": 28,
+      "params": {
+        "mode": "find-ceiling",
+        "max_p99_ms": 250,
+        "max_error_rate": 0.01,
+        "min_samples": 50,
+        "settle_s": 2,
+        "step_interval_s": 3,
+        "start_rps": 10,
+        "step_pct": 25,
+        "max_rps": 80,
+        "confirm_hold_s": 4,
+        "max_duration_s": 300
+      },
+      "events": [
+        {
+          "state": "stepping",
+          "hold_rps": 10,
+          "reason": "starting at 10 RPS",
+          "elapsed_s": 0
+        },
+        {
+          "state": "stepping",
+          "hold_rps": 13,
+          "reason": "healthy at 10 RPS (p99=2ms, errors=0.00%); stepping to 13",
+          "elapsed_s": 7
+        },
+        {
+          "state": "stepping",
+          "hold_rps": 17,
+          "reason": "healthy at 13 RPS (p99=2ms, errors=0.00%); stepping to 17",
+          "elapsed_s": 13
+        },
+        {
+          "state": "stepping",
+          "hold_rps": 22,
+          "reason": "healthy at 17 RPS (p99=1ms, errors=0.00%); stepping to 22",
+          "elapsed_s": 18
+        },
+        {
+          "state": "stepping",
+          "hold_rps": 28,
+          "reason": "healthy at 22 RPS (p99=1ms, errors=0.00%); stepping to 28",
+          "elapsed_s": 23
+        },
+        {
+          "state": "stepping",
+          "hold_rps": 35,
+          "reason": "healthy at 28 RPS (p99=1ms, errors=0.00%); stepping to 35",
+          "elapsed_s": 27
+        },
+        {
+          "state": "breached",
+          "hold_rps": 35,
+          "reason": "Autopilot: ceiling breached at 35 RPS (p99=406ms \u003e 250ms); backing off to 28 RPS",
+          "elapsed_s": 31
+        },
+        {
+          "state": "confirming",
+          "hold_rps": 28,
+          "reason": "confirming 28 RPS for 4s",
+          "elapsed_s": 31
+        },
+        {
+          "state": "done",
+          "hold_rps": 28,
+          "reason": "ceiling confirmed at 28 RPS",
+          "ceiling_rps": 28,
+          "outcome": "ceiling_found",
+          "elapsed_s": 36
+        }
+      ]
+    }
+  },
+  "endpoints": [
+    {
+      "id": "GET:http://127.0.0.1:18099/slow/search",
+      "status_dist": {
+        "200": 1
+      },
+      "latency": {
+        "p50": 0,
+        "p95": 405,
+        "p99": 406,
+        "max": 407
+      },
+      "payload_size": {
+        "avg": 2,
+        "p95": 2,
+        "max": 2
+      },
+      "error_rate": 0,
+      "request_count": 735,
+      "body_samples_observed": 36,
+      "body_samples_stored": 36
+    }
+  ]
+}

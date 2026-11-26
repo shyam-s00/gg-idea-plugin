@@ -22,7 +22,8 @@ class HeartbeatPayloadParsingTest {
 
     private val allStreams = listOf(
         "stream-v130-control.ndjson", "stream-v130-control-none.ndjson",
-        "stream-v130-natural.ndjson", "stream-v120.ndjson"
+        "stream-v130-natural.ndjson", "stream-v120.ndjson",
+        "stream-v150-autopilot.ndjson", "stream-v150-find-ceiling.ndjson", "stream-v150-errors.ndjson"
     )
 
     @Test
@@ -125,5 +126,148 @@ class HeartbeatPayloadParsingTest {
         val stopped = payloads("stream-v130-control.ndjson").last { it.event == "stopped" }
         assertTrue(stopped.totalRequests > 0)
         assertTrue(stopped.message.contains("Snapshot saved"))
+    }
+
+    @Test
+    fun v150StartedAdvertisesHoldAutopilotAndClickTimeMarks() {
+        val started = payloads("stream-v150-autopilot.ndjson").first { it.event == "started" }
+        assertEquals(
+            listOf("control.bias", "control.mark", "control.mark.elapsed", "control.stop", "control.hold", "control.autopilot"),
+            started.capabilities
+        )
+    }
+
+    @Test
+    fun olderStreamsLeaveEveryNewFieldNull() {
+        allStreams.filter { "v150" !in it }.forEach { name ->
+            payloads(name).forEach {
+                assertNull(name, it.holdRps)
+                assertNull(name, it.autopilot)
+                assertNull(name, it.window)
+                assertNull(name, it.errorMix)
+                assertNull(name, it.source)
+                assertNull(name, it.mode)
+                assertNull(name, it.ceilingRps)
+            }
+        }
+    }
+
+    @Test
+    fun heartbeatCarriesWindowHealth() {
+        val window = payloads("stream-v150-errors.ndjson").first { it.event == "heartbeat" }.window!!
+        assertEquals(1, window.seconds)
+        assertEquals(60, window.samples)
+        assertEquals(0.6667, window.errorRate, 0.001)
+        assertTrue(window.p99Ms > 0.0)
+        assertFalse(window.capped)
+    }
+
+    @Test
+    fun errorMixListsTheFailingEndpointsAndCodes() {
+        val mix = payloads("stream-v150-errors.ndjson").first { it.event == "heartbeat" }.errorMix!!
+        assertEquals(10, mix.windowSeconds)
+        assertEquals(40, mix.sampled)
+        assertEquals(20, mix.http5xx)
+        assertEquals(20, mix.http4xx)
+        assertEquals(0, mix.transport)
+        assertEquals(listOf(404 to 20, 503 to 20), mix.topCodes.map { it.code to it.n })
+        val top = mix.topEndpoints.first { it.code == 503 }
+        assertEquals("GET /fail/checkout", top.endpoint)
+        assertEquals("http_5xx", top.kind)
+        assertEquals(20, top.n)
+    }
+
+    @Test
+    fun errorMixIsAbsentWhileNothingFails() {
+        val heartbeats = payloads("stream-v150-find-ceiling.ndjson").filter { it.event == "heartbeat" }
+        assertTrue(heartbeats.isNotEmpty())
+        assertTrue(heartbeats.all { it.errorMix == null })
+    }
+
+    @Test
+    fun holdShowsOnHeartbeatsUntilReleasedAndSurvivesTheAutopilotThatSetIt() {
+        val heartbeats = payloads("stream-v150-autopilot.ndjson").filter { it.event == "heartbeat" }
+        assertEquals(15, heartbeats.first { it.holdRps != null }.holdRps)
+        val clamped = heartbeats.filter { it.autopilot?.state == "clamped" }
+        assertEquals(listOf(17, 17), clamped.map { it.holdRps })
+        val afterAutopilot = heartbeats.dropWhile { it.autopilot?.state != "clamped" }.dropWhile { it.autopilot != null }
+        assertEquals(listOf(17, 17), afterAutopilot.takeWhile { it.holdRps != null }.map { it.holdRps })
+        assertTrue(afterAutopilot.last().holdRps == null)
+    }
+
+    @Test
+    fun heartbeatAutopilotIsANestedObject() {
+        val watching = payloads("stream-v150-autopilot.ndjson").first { it.autopilot != null }
+        assertEquals(AutopilotBrief("slo-guard", "watching"), watching.autopilot)
+        assertNull(watching.mode)
+        assertNull(watching.state)
+    }
+
+    @Test
+    fun autopilotEventsCarryModeAndStateAtTheTopLevel() {
+        val events = payloads("stream-v150-autopilot.ndjson").filter { it.event == "autopilot" }
+        assertEquals(listOf("watching", "clamped", "done"), events.map { it.state })
+        assertTrue(events.all { it.mode == "slo-guard" })
+        assertNull(events.first().autopilot)
+        assertEquals(17, events[1].holdRps)
+        assertEquals("stopped", events.last().outcome)
+        assertTrue(events.none { it.isTerminal })
+    }
+
+    @Test
+    fun findCeilingEndsWithTheCeilingOnBothTheEventAndTheFinish() {
+        val stream = payloads("stream-v150-find-ceiling.ndjson")
+        val done = stream.last { it.event == "autopilot" }
+        assertEquals("done", done.state)
+        assertEquals("ceiling_found", done.outcome)
+        assertEquals(28, done.ceilingRps)
+        val finished = stream.last()
+        assertEquals("finished", finished.event)
+        assertEquals("find-ceiling", finished.mode)
+        assertEquals(28, finished.ceilingRps)
+        assertNull(stream.first { it.event == "started" }.profile)
+    }
+
+    @Test
+    fun autopilotMarksAreUnsolicitedAndNamedAsTheirSource() {
+        val marks = payloads("stream-v150-autopilot.ndjson").filter { it.event == "mark" }
+        val user = marks.first { it.id == "m_1" }
+        assertNull(user.source)
+        assertEquals(1.5, user.elapsedSeconds!!, 0.0)
+        val auto = marks.single { it.source == "autopilot" }
+        assertNull(auto.id)
+        assertTrue(auto.label!!.startsWith("Autopilot SLO Guard triggered"))
+    }
+
+    @Test
+    fun holdAckCarriesTheRateAndReleaseAckDoesNot() {
+        val acks = payloads("stream-v150-autopilot.ndjson").filter { it.event == "ack" }.associateBy { it.id }
+        assertEquals(15, acks.getValue("h_1").holdRps)
+        assertEquals("hold", acks.getValue("h_1").command)
+        assertNull(acks.getValue("h_2").holdRps)
+        assertEquals("release", acks.getValue("h_2").command)
+        assertEquals("slo-guard", acks.getValue("a_1").mode)
+    }
+
+    @Test
+    fun manualCommandsDuringAnAutopilotAreRejectedWithoutEndingTheRun() {
+        val rejected = payloads("stream-v150-autopilot.ndjson").filter { it.reason == "autopilot_active" }
+        assertEquals(listOf("b_2", "h_3"), rejected.map { it.id })
+        assertTrue(rejected.all { it.isCommandError && !it.isTerminal })
+    }
+
+    @Test
+    fun heartbeatElapsedIsRunTimeAndIncreases() {
+        val heartbeats = payloads("stream-v150-errors.ndjson").filter { it.event == "heartbeat" }
+        assertEquals(1.0, heartbeats.first().elapsedSeconds!!, 0.05)
+        assertTrue(heartbeats.zipWithNext().all { (a, b) -> b.elapsedSeconds!! > a.elapsedSeconds!! })
+    }
+
+    @Test
+    fun clampedAndSourceReadFromAMarkReply() {
+        val mark = parse("""{"event":"mark","id":"m1","label":"x","elapsed_s":0.01,"clamped":true,"source":"user"}""")
+        assertEquals(true, mark.clamped)
+        assertEquals("user", mark.source)
+        assertEquals(true, parse("""{"event":"error","reason":"autopilot_active","message":"m"}""").isCommandError)
     }
 }

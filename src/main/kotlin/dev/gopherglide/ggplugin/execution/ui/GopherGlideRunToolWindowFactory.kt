@@ -4,6 +4,8 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
+import dev.gopherglide.ggplugin.ai.ConfigureAiAgentsAction
+import dev.gopherglide.ggplugin.ai.RUN_TOOLBAR_PLACE
 import dev.gopherglide.ggplugin.execution.IdeBinaryActions
 import dev.gopherglide.ggplugin.execution.actions.StopGopherGlideRunAction
 import dev.gopherglide.ggplugin.ui.GopherGlideToolWindowFactory
@@ -20,8 +22,12 @@ object GopherGlideRunToolWindowFactory {
         val panel = GopherGlideRunPanel(IdeBinaryActions(project))
         panels[project] = panel
 
-        val actionGroup = DefaultActionGroup().apply { add(StopGopherGlideRunAction()) }
-        val toolbar = ActionManager.getInstance().createActionToolbar("GopherGlideRunToolbar", actionGroup, true)
+        val actionGroup = DefaultActionGroup().apply {
+            add(StopGopherGlideRunAction())
+            addSeparator()
+            add(ConfigureAiAgentsAction())
+        }
+        val toolbar = ActionManager.getInstance().createActionToolbar(RUN_TOOLBAR_PLACE, actionGroup, true)
         toolbar.targetComponent = panel
 
         val wrapper = JPanel(BorderLayout())

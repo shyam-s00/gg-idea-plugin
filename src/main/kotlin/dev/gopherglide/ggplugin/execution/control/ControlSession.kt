@@ -31,6 +31,8 @@ class ControlSession(private val output: OutputStream, private val executor: Exe
     private val biasIds = AtomicInteger()
     private val markIds = AtomicInteger()
     private val stopIds = AtomicInteger()
+    private val holdIds = AtomicInteger()
+    private val autopilotIds = AtomicInteger()
 
     @Volatile private var closed = false
     @Volatile private var stopRequested = false
@@ -40,9 +42,32 @@ class ControlSession(private val output: OutputStream, private val executor: Exe
         enqueue(ControlCommand.Bias("b_${biasIds.incrementAndGet()}", amount), onReply)
     }
 
-    fun sendMark(label: String, onReply: (ControlReply) -> Unit = {}) {
+    fun sendMark(label: String, elapsedSeconds: Double? = null, onReply: (ControlReply) -> Unit = {}) {
         if (!accepting(onReply)) return
-        enqueue(ControlCommand.Mark("m_${markIds.incrementAndGet()}", label), onReply)
+        enqueue(ControlCommand.Mark("m_${markIds.incrementAndGet()}", label, elapsedSeconds), onReply)
+    }
+
+    fun sendHold(rps: Int, onReply: (ControlReply) -> Unit = {}) {
+        if (!accepting(onReply)) return
+        enqueue(ControlCommand.Hold("h_${holdIds.incrementAndGet()}", rps), onReply)
+    }
+
+    fun sendRelease(onReply: (ControlReply) -> Unit = {}) {
+        if (!accepting(onReply)) return
+        enqueue(ControlCommand.Release("h_${holdIds.incrementAndGet()}"), onReply)
+    }
+
+    fun startAutopilot(mode: String, maxP99Ms: Int?, maxErrorRate: Double?, onReply: (ControlReply) -> Unit = {}) {
+        if (!accepting(onReply)) return
+        val command = ControlCommand.Autopilot(
+            "a_${autopilotIds.incrementAndGet()}", ControlCommand.Autopilot.Action.START, mode, maxP99Ms, maxErrorRate
+        )
+        enqueue(command, onReply)
+    }
+
+    fun stopAutopilot(onReply: (ControlReply) -> Unit = {}) {
+        if (!accepting(onReply)) return
+        enqueue(ControlCommand.Autopilot("a_${autopilotIds.incrementAndGet()}", ControlCommand.Autopilot.Action.STOP), onReply)
     }
 
     override fun sendStop(onReply: (ControlReply) -> Unit) {

@@ -1,6 +1,7 @@
 package dev.gopherglide.ggplugin.services
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import java.util.concurrent.TimeUnit
@@ -25,9 +26,10 @@ class BinaryStatus {
 
     /** Loads on a pooled thread and delivers the result on the EDT. */
     fun loadAsync(binaryPath: String? = null, onLoaded: (BinaryStatusCache.Snapshot) -> Unit) {
+        val modality = ModalityState.current()
         ApplicationManager.getApplication().executeOnPooledThread {
             val snapshot = load(binaryPath)
-            ApplicationManager.getApplication().invokeLater { onLoaded(snapshot) }
+            ApplicationManager.getApplication().invokeLater({ onLoaded(snapshot) }, modality)
         }
     }
 

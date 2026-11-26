@@ -56,6 +56,12 @@ object GopherGlideNotifications {
         notification.notify(null)
     }
 
+    fun info(project: Project?, content: String, vararg actions: NotificationAction) {
+        val notification = group().createNotification("Gopher Glide", content, NotificationType.INFORMATION)
+        actions.forEach { notification.addAction(it) }
+        notification.notify(project)
+    }
+
     fun notifyBinaryMissing(project: Project) {
         val notification = group().createNotification(
             "Gopher Glide binary not found",

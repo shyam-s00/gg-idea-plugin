@@ -11,10 +11,59 @@ data class StageInfo(
     val targetRps: Int = 0
 )
 
+/** The autopilot as a heartbeat reports it while it is running; absent once it is done. */
+data class AutopilotBrief(
+    val mode: String = "",
+    val state: String = ""
+)
+
+/** Health over a short recent window, unlike the cumulative figures. From `gg` v1.5.0. */
+data class WindowHealthPayload(
+    val seconds: Int = 0,
+    @SerializedName("p99_ms")
+    val p99Ms: Double = 0.0,
+    @SerializedName("error_rate")
+    val errorRate: Double = 0.0,
+    val samples: Int = 0,
+    /** True when the sample cap truncated the window. */
+    val capped: Boolean = false
+)
+
+data class ErrorCode(
+    val code: Int = 0,
+    val n: Int = 0
+)
+
+data class ErrorEndpoint(
+    val endpoint: String = "",
+    val n: Int = 0,
+    val code: Int = 0,
+    /** "http_5xx" | "http_4xx" | "transport" | "extract" */
+    val kind: String = ""
+)
+
+/** What failed over the last [windowSeconds]. From `gg` v1.5.0; absent while nothing has failed. */
+data class ErrorMixPayload(
+    @SerializedName("window_s")
+    val windowSeconds: Int = 0,
+    val sampled: Int = 0,
+    val transport: Int = 0,
+    @SerializedName("http_4xx")
+    val http4xx: Int = 0,
+    @SerializedName("http_5xx")
+    val http5xx: Int = 0,
+    val extract: Int = 0,
+    @SerializedName("top_codes")
+    val topCodes: List<ErrorCode> = emptyList(),
+    val capped: Boolean = false,
+    @SerializedName("top_endpoints")
+    val topEndpoints: List<ErrorEndpoint> = emptyList()
+)
+
 /** Mirrors the JSON heartbeat shape emitted by `gg --headless --reporter json`. */
 data class HeartbeatPayload(
     val time: String = "",
-    val event: String = "", // "heartbeat" | "started" | "finished" | "stopped" | "snap" | "interrupted" | "error" | "ack" | "mark"
+    val event: String = "", // "heartbeat" | "started" | "finished" | "stopped" | "snap" | "interrupted" | "error" | "ack" | "mark" | "autopilot"
     val stage: Int = 0,
     @SerializedName("total_stages")
     val totalStages: Int = 0,
@@ -57,7 +106,24 @@ data class HeartbeatPayload(
     @SerializedName("elapsed_s")
     val elapsedSeconds: Double? = null,
     /** Set only on a command "error" reply; a fatal run "error" has none. */
-    val reason: String? = null
+    val reason: String? = null,
+    /** True on a "mark" whose requested time was moved into the run's span. */
+    val clamped: Boolean? = null,
+    /** "user" | "agent" | "autopilot"; null when gg does not say. */
+    val source: String? = null,
+    /** The pinned rate; null when nothing is pinned. */
+    @SerializedName("hold_rps")
+    val holdRps: Int? = null,
+    /** Nested on heartbeats while an autopilot runs; other events use the top-level [mode] and [state]. */
+    val autopilot: AutopilotBrief? = null,
+    val mode: String? = null,
+    val state: String? = null,
+    val outcome: String? = null,
+    @SerializedName("ceiling_rps")
+    val ceilingRps: Int? = null,
+    val window: WindowHealthPayload? = null,
+    @SerializedName("error_mix")
+    val errorMix: ErrorMixPayload? = null
 ) {
     /** True for an "error" reply to a control command, which does not end the run. */
     val isCommandError: Boolean get() = event == "error" && !reason.isNullOrEmpty()

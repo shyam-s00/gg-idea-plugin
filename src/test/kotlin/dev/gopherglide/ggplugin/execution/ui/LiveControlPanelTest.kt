@@ -4,13 +4,17 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
+import dev.gopherglide.ggplugin.execution.AutopilotBrief
 import dev.gopherglide.ggplugin.execution.HeartbeatPayload
+import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
 import dev.gopherglide.ggplugin.execution.annotations.RunAnnotation
+import dev.gopherglide.ggplugin.execution.autopilot.SloLimits
 import dev.gopherglide.ggplugin.execution.control.BinaryActions
 import dev.gopherglide.ggplugin.execution.control.ControlReply
 import dev.gopherglide.ggplugin.execution.control.RunControls
 import dev.gopherglide.ggplugin.services.GopherGlideVersion
 import dev.gopherglide.ggplugin.services.InstalledBinary
+import java.math.BigDecimal
 import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
@@ -21,15 +25,49 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         val sent = mutableListOf<Int>()
         val replies = mutableListOf<(ControlReply) -> Unit>()
         val marksSent = mutableListOf<String>()
+        val markTimes = mutableListOf<Double?>()
         val markReplies = mutableListOf<(ControlReply) -> Unit>()
         override fun requestStop() {}
         override fun sendBias(amount: Int, onReply: (ControlReply) -> Unit) {
             sent += amount
             replies += onReply
         }
-        override fun sendMark(label: String, onReply: (ControlReply) -> Unit) {
+        override fun sendMark(label: String, elapsedSeconds: Double?, onReply: (ControlReply) -> Unit) {
             marksSent += label
+            markTimes += elapsedSeconds
             markReplies += onReply
+        }
+        var steerSupported = false
+        override val agentSteerSupported: Boolean get() = steerSupported
+        val steerCalls = mutableListOf<Boolean>()
+        val steerReplies = mutableListOf<(ControlReply) -> Unit>()
+        override fun setAgentSteer(allow: Boolean, onReply: (ControlReply) -> Unit) {
+            steerCalls += allow
+            steerReplies += onReply
+        }
+        val holdsSent = mutableListOf<Int>()
+        val holdReplies = mutableListOf<(ControlReply) -> Unit>()
+        var releases = 0
+        val releaseReplies = mutableListOf<(ControlReply) -> Unit>()
+        override fun sendHold(rps: Int, onReply: (ControlReply) -> Unit) {
+            holdsSent += rps
+            holdReplies += onReply
+        }
+        override fun sendRelease(onReply: (ControlReply) -> Unit) {
+            releases++
+            releaseReplies += onReply
+        }
+        class GuardStart(val mode: String, val maxP99Ms: Int?, val maxErrorRate: Double?)
+        val guards = mutableListOf<GuardStart>()
+        val autopilotReplies = mutableListOf<(ControlReply) -> Unit>()
+        var autopilotStops = 0
+        override fun startAutopilot(mode: String, maxP99Ms: Int?, maxErrorRate: Double?, onReply: (ControlReply) -> Unit) {
+            guards += GuardStart(mode, maxP99Ms, maxErrorRate)
+            autopilotReplies += onReply
+        }
+        override fun stopAutopilot(onReply: (ControlReply) -> Unit) {
+            autopilotStops++
+            autopilotReplies += onReply
         }
         val infoLoaders = mutableListOf<(InstalledBinary?, GopherGlideVersion?) -> Unit>()
         override fun loadBinaryInfo(onLoaded: (InstalledBinary?, GopherGlideVersion?) -> Unit) { infoLoaders += onLoaded }
@@ -52,6 +90,7 @@ class LiveControlPanelTest : BasePlatformTestCase() {
     private val binary = FakeBinaryActions()
 
     private val all = listOf("control.bias", "control.mark", "control.stop")
+    private val v15 = all + listOf("control.mark.elapsed", "control.hold", "control.autopilot")
     private val annotations = mutableListOf<RunAnnotation>()
     private var clock = 42.0
 
@@ -60,14 +99,24 @@ class LiveControlPanelTest : BasePlatformTestCase() {
     private var nextLabel: String? = null
     private var duringPrompt: () -> Unit = {}
 
-    private fun panel(): LiveControlPanel =
-        LiveControlPanel({ clock }, { annotations += it }, { duringPrompt(); nextLabel }, binary)
+    private var nextRate: Int? = 15
+    private var suggestedRate: Int? = null
+    private var nextLimits: SloLimits? = SloLimits(120, BigDecimal("0.02"))
 
-    private fun active(controls: FakeControls = FakeControls()): Pair<LiveControlPanel, FakeControls> {
+    private fun panel(): LiveControlPanel = LiveControlPanel(
+        { clock }, { annotations += it }, { duringPrompt(); nextLabel }, binary,
+        { _, suggested -> suggestedRate = suggested; duringPrompt(); nextRate },
+        { nextLimits }
+    )
+
+    private fun active(
+        controls: FakeControls = FakeControls(),
+        capabilities: List<String> = all
+    ): Pair<LiveControlPanel, FakeControls> {
         val panel = panel()
         panel.reset()
         panel.bind(controls)
-        panel.onStarted(all)
+        panel.onStarted(capabilities)
         return panel to controls
     }
 
@@ -215,6 +264,19 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         assertTrue(labels(panel).any { it.contains("Installed: v1.2.0 at /usr/local/bin/gg") })
         assertTrue(shown(panel, button(panel, "Install gg v1.3.0")))
         assertFalse(shown(panel, button(panel, "+5")))
+    }
+
+    fun testIdlePanelHintsAtWhatV15AddsForAV13Binary() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](system13, v13)
+        assertTrue(labels(panel).contains("gg v1.5.0 adds Autopilot, Rate Hold and click-time marks"))
+    }
+
+    fun testIdlePanelHasNoUpgradeHintForAV15Binary() {
+        val panel = idlePanel()
+        binary.statusLoaders[0](InstalledBinary("/usr/local/bin/gg", GopherGlideVersion(1, 5, 0), InstalledBinary.Source.SYSTEM), v13)
+        assertTrue(labels(panel).contains("Live Control, Rate Hold and Autopilot available (gg v1.5.0)"))
+        assertFalse(labels(panel).any { it.contains("adds Autopilot") })
     }
 
     fun testIdlePanelShowsAQuietLineForACurrentBinary() {
@@ -481,6 +543,79 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         assertTrue(labels(panel).contains("The run ended before the mark could be sent"))
     }
 
+    fun testMarkIsStampedWithTheClickNotTheTimeTheLabelWasEntered() {
+        val (panel, controls) = active(capabilities = v15)
+        clock = 18.0
+        nextLabel = "cache-warm"
+        duringPrompt = { clock = 42.0 }
+        button(panel, "Mark…").doClick()
+        assertEquals(listOf<Double?>(18.0), controls.markTimes)
+    }
+
+    fun testClickTimeIsRoundedToTheMillisecond() {
+        val (panel, controls) = active(capabilities = v15)
+        clock = 18.23456
+        nextLabel = "x"
+        button(panel, "Mark…").doClick()
+        assertEquals(listOf<Double?>(18.235), controls.markTimes)
+    }
+
+    fun testBinaryWithoutClickTimeMarksSendsNoTime() {
+        val (panel, controls) = active()
+        clock = 18.0
+        nextLabel = "x"
+        button(panel, "Mark…").doClick()
+        assertEquals(listOf<Double?>(null), controls.markTimes)
+    }
+
+    fun testReplyWithoutATimeFallsBackToTheClickNotTheReplyMoment() {
+        val (panel, controls) = active(capabilities = v15)
+        clock = 10.0
+        nextLabel = "x"
+        duringPrompt = { clock = 30.0 }
+        button(panel, "Mark…").doClick()
+        clock = 31.0
+        controls.markReplies[0](ControlReply.MarkRecorded(HeartbeatPayload(event = "mark")))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.Mark("x", 10.0)), annotations)
+    }
+
+    fun testGgsClampedTimeWinsOverTheClick() {
+        val (panel, controls) = active(capabilities = v15)
+        nextLabel = "x"
+        button(panel, "Mark…").doClick()
+        controls.markReplies[0](ControlReply.MarkRecorded(HeartbeatPayload(event = "mark", label = "x", elapsedSeconds = 40.0, clamped = true)))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.Mark("x", 40.0)), annotations)
+    }
+
+    fun testMarksListChronologicallyEvenWhenRepliesArriveOutOfOrder() {
+        val (panel, controls) = active(capabilities = v15)
+        nextLabel = "first"
+        button(panel, "Mark…").doClick()
+        nextLabel = "second"
+        button(panel, "Mark…").doClick()
+        controls.markReplies[1](markReply("second", 58.1))
+        controls.markReplies[0](markReply("first", 18.4))
+        val label = lastMarkLabel(panel)!!
+        assertEquals("Last mark: “second” at 0:58 · 2 marks", label.text)
+        assertTrue(label.toolTipText.indexOf("first") < label.toolTipText.indexOf("second"))
+    }
+
+    fun testRunningAutopilotLocksTheBiasControlsUntilItIsDone() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onHeartbeat(0, 17, AutopilotBrief("slo-guard", "clamped"))
+        listOf("−10", "−5", "+5", "+10").forEach { assertFalse(it, button(panel, it).isEnabled) }
+        assertTrue(button(panel, "Mark…").isEnabled)
+        panel.onAutopilotEvent("slo-guard", "done")
+        panel.onHeartbeat(0, 17, null)
+        listOf("−10", "−5", "+5", "+10").forEach { assertTrue(it, button(panel, it).isEnabled) }
+    }
+
+    fun testAutopilotEventLocksTheBiasControlsBeforeTheNextHeartbeat() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onAutopilotEvent("find-ceiling", "stepping")
+        assertFalse(button(panel, "+5").isEnabled)
+    }
+
     fun testHeartbeatsDoNotDisturbTheLastMark() {
         val (panel, controls) = active()
         nextLabel = "cache-warm"
@@ -526,5 +661,233 @@ class LiveControlPanelTest : BasePlatformTestCase() {
         controls.replies[0](ack(10))
         assertTrue(annotations.isEmpty())
         assertTrue(labels(panel).contains("Bias —"))
+    }
+
+    private fun shownButtons(panel: LiveControlPanel) = visibleButtons(panel)
+
+    private fun holdAck(rps: Int?, at: Double = 5.0, source: String? = null) =
+        ControlReply.Ack(HeartbeatPayload(event = "ack", command = if (rps != null) "hold" else "release", holdRps = rps, elapsedSeconds = at, source = source))
+
+    fun testHoldAndAutopilotControlsAreHiddenOnABinaryWithoutThem() {
+        val (panel, _) = active()
+        val buttons = shownButtons(panel)
+        assertFalse(buttons.contains("Hold RPS"))
+        assertFalse(buttons.contains("🛡️ Guard SLO…"))
+        assertFalse(buttons.contains("Stop Autopilot (Take Over)"))
+    }
+
+    fun testHoldAndGuardControlsAppearOnV15() {
+        val (panel, _) = active(capabilities = v15)
+        val buttons = shownButtons(panel)
+        assertTrue(buttons.contains("Hold RPS"))
+        assertTrue(buttons.contains("🛡️ Guard SLO…"))
+        assertFalse(buttons.contains("Stop Autopilot (Take Over)"))
+    }
+
+    fun testHoldAsksForARateSuggestingTheCurrentTarget() {
+        val (panel, controls) = active(capabilities = v15)
+        panel.onHeartbeat(0, null, null, 40)
+        button(panel, "Hold RPS").doClick()
+        assertEquals(40, suggestedRate)
+        assertEquals(listOf(15), controls.holdsSent)
+    }
+
+    fun testCancellingTheRatePromptSendsNothing() {
+        val (panel, controls) = active(capabilities = v15)
+        nextRate = null
+        button(panel, "Hold RPS").doClick()
+        assertTrue(controls.holdsSent.isEmpty())
+    }
+
+    fun testHoldAckShowsTheBadgeAtOnceAndFlipsTheButton() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "Hold RPS").doClick()
+        assertFalse(labels(panel).contains("📌 Hold 15 RPS") && shown(panel, UIUtil.findComponentsOfType(panel, JBLabel::class.java).first { it.text == "📌 Hold 15 RPS" }))
+        controls.holdReplies[0](holdAck(15))
+        val badge = UIUtil.findComponentsOfType(panel, JBLabel::class.java).first { it.text == "📌 Hold 15 RPS" }
+        assertTrue(shown(panel, badge))
+        assertTrue(shownButtons(panel).contains("Release Hold"))
+        assertFalse(shownButtons(panel).contains("Hold RPS"))
+    }
+
+    fun testHoldAckRecordsAnAnnotationAtGgsTime() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "Hold RPS").doClick()
+        controls.holdReplies[0](holdAck(15, at = 7.5))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.HoldChange(15, 7.5)), annotations)
+    }
+
+    fun testReleaseSendsReleaseAndClearsTheBadge() {
+        val (panel, controls) = active(capabilities = v15)
+        panel.onHeartbeat(0, 15)
+        button(panel, "Release Hold").doClick()
+        assertEquals(1, controls.releases)
+        controls.releaseReplies[0](holdAck(null, at = 9.0))
+        assertTrue(shownButtons(panel).contains("Hold RPS"))
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.HoldChange(null, 9.0)), annotations)
+        val badge = UIUtil.findComponentsOfType(panel, JBLabel::class.java).first { it.text.orEmpty().startsWith("📌") }
+        assertFalse(shown(panel, badge))
+    }
+
+    fun testRejectedHoldShowsWhyAndRecordsNothing() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "Hold RPS").doClick()
+        controls.holdReplies[0](ControlReply.Rejected(HeartbeatPayload(event = "error", reason = "invalid_argument", message = "rps must be an integer >= 1")))
+        assertTrue(labels(panel).contains("gg rejected a command: invalid_argument — rps must be an integer >= 1"))
+        assertTrue(annotations.isEmpty())
+    }
+
+    fun testHoldReplyFromAnEarlierRunIsIgnored() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "Hold RPS").doClick()
+        panel.reset()
+        controls.holdReplies[0](holdAck(15))
+        assertTrue(annotations.isEmpty())
+    }
+
+    fun testRunEndingWhileTheRatePromptIsOpenSendsNothing() {
+        val (panel, controls) = active(capabilities = v15)
+        duringPrompt = { panel.onEnded() }
+        button(panel, "Hold RPS").doClick()
+        assertTrue(controls.holdsSent.isEmpty())
+        assertTrue(labels(panel).contains("The run ended before the hold could be sent"))
+    }
+
+    fun testAHoldFromAHeartbeatShowsWithoutAnyClick() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onHeartbeat(0, 280)
+        assertTrue(shownButtons(panel).contains("Release Hold"))
+    }
+
+    fun testAutopilotShowsItsPillAndSwapsGuardForStop() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onHeartbeat(0, 28, AutopilotBrief("find-ceiling", "stepping"))
+        assertTrue(labels(panel).contains("⚡ Autopilot: Find Ceiling · Stepping (28 RPS)"))
+        val buttons = shownButtons(panel)
+        assertTrue(buttons.contains("Stop Autopilot (Take Over)"))
+        assertFalse(buttons.contains("🛡️ Guard SLO…"))
+    }
+
+    fun testManualRateControlsAreOffWithAnExplanationWhileTheAutopilotRuns() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onHeartbeat(0, 28, AutopilotBrief("slo-guard", "clamped"))
+        assertFalse(button(panel, "+5").isEnabled)
+        assertFalse(button(panel, "Release Hold").isEnabled)
+        assertEquals("The autopilot owns the rate. Stop it to steer by hand.", button(panel, "+5").toolTipText)
+        panel.onAutopilotEvent("slo-guard", "done")
+        panel.onHeartbeat(0, 28, null)
+        assertTrue(button(panel, "+5").isEnabled)
+        assertTrue(button(panel, "Release Hold").isEnabled)
+        assertNull(button(panel, "+5").toolTipText)
+    }
+
+    fun testStoppingTheAutopilotKeepsTheHoldVisibleUntilReleased() {
+        val (panel, controls) = active(capabilities = v15)
+        panel.onHeartbeat(0, 280, AutopilotBrief("slo-guard", "clamped"))
+        button(panel, "Stop Autopilot (Take Over)").doClick()
+        assertEquals(1, controls.autopilotStops)
+        panel.onAutopilotEvent("slo-guard", "done")
+        controls.autopilotReplies[0](ControlReply.Ack(HeartbeatPayload(event = "ack", command = "autopilot")))
+        panel.onHeartbeat(0, 280, null)
+        assertTrue(shownButtons(panel).contains("Release Hold"))
+        assertTrue(button(panel, "Release Hold").isEnabled)
+        assertTrue(labels(panel).contains("📌 Hold 280 RPS"))
+        assertFalse(shownButtons(panel).contains("Stop Autopilot (Take Over)"))
+    }
+
+    fun testGuardStartsTheSloGuardWithTheChosenLimits() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "🛡️ Guard SLO…").doClick()
+        val start = controls.guards.single()
+        assertEquals("slo-guard", start.mode)
+        assertEquals(120, start.maxP99Ms)
+        assertEquals(0.02, start.maxErrorRate!!, 0.0)
+    }
+
+    fun testCancellingTheGuardDialogStartsNothing() {
+        val (panel, controls) = active(capabilities = v15)
+        nextLimits = null
+        button(panel, "🛡️ Guard SLO…").doClick()
+        assertTrue(controls.guards.isEmpty())
+    }
+
+    fun testRefusedGuardShowsWhy() {
+        val (panel, controls) = active(capabilities = v15)
+        button(panel, "🛡️ Guard SLO…").doClick()
+        controls.autopilotReplies[0](ControlReply.Rejected(HeartbeatPayload(event = "error", reason = "invalid_argument", message = "mode must be slo-guard")))
+        assertTrue(labels(panel).contains("gg rejected a command: invalid_argument — mode must be slo-guard"))
+    }
+
+    fun testAutopilotControlsGoQuietWhenTheRunEnds() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onHeartbeat(0, 28, AutopilotBrief("find-ceiling", "stepping"))
+        panel.onEnded()
+        assertFalse(button(panel, "Stop Autopilot (Take Over)").isEnabled)
+        assertFalse(labels(panel).any { it.startsWith("⚡ Autopilot:") && shown(panel, UIUtil.findComponentsOfType(panel, JBLabel::class.java).first { l -> l.text == it }) })
+    }
+
+    fun testAutopilotMarkIsRecordedWithItsSourceAndShownAsTheLastMark() {
+        val (panel, _) = active(capabilities = v15)
+        panel.onUnsolicitedMark("ceiling breached at 35 RPS", 31.0, AnnotationSource.AUTOPILOT)
+        assertEquals(listOf<RunAnnotation>(RunAnnotation.Mark("ceiling breached at 35 RPS", 31.0, AnnotationSource.AUTOPILOT)), annotations)
+        assertEquals("Last mark: “⚡ ceiling breached at 35 RPS” at 0:31 · 1 mark", lastMarkLabel(panel)!!.text)
+    }
+
+    fun testAutopilotMarksSitInTimeOrderAmongTheUsersOwn() {
+        val (panel, controls) = active(capabilities = v15)
+        nextLabel = "mine"
+        button(panel, "Mark…").doClick()
+        controls.markReplies[0](markReply("mine", 40.0))
+        panel.onUnsolicitedMark("auto", 31.0, AnnotationSource.AUTOPILOT)
+        val tooltip = lastMarkLabel(panel)!!.toolTipText
+        assertTrue(tooltip.indexOf("auto") < tooltip.indexOf("mine"))
+        assertEquals("Last mark: “mine” at 0:40 · 2 marks", lastMarkLabel(panel)!!.text)
+    }
+
+    private fun steerBox(panel: LiveControlPanel) =
+        UIUtil.findComponentsOfType(panel, com.intellij.ui.components.JBCheckBox::class.java).first { it.text == "🤖 Allow AI Steer" }
+
+    fun testAllowAiSteerIsHiddenForARunThatCannotBeShared() {
+        val (panel, _) = active(capabilities = v15)
+        assertFalse(shown(panel, steerBox(panel)))
+    }
+
+    fun testAllowAiSteerAppearsOffForARunOnTheSharedDaemon() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        assertTrue(shown(panel, steerBox(panel)))
+        assertFalse(steerBox(panel).isSelected)
+    }
+
+    fun testTickingItLetsAgentsSteerAndUntickingTakesItBack() {
+        val (panel, controls) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        controls.steerReplies[0](ControlReply.Ack(HeartbeatPayload(event = "ack", command = "agent_steer")))
+        steerBox(panel).doClick()
+        controls.steerReplies[1](ControlReply.Ack(HeartbeatPayload(event = "ack", command = "agent_steer")))
+        assertEquals(listOf(true, false), controls.steerCalls)
+        assertFalse(steerBox(panel).isSelected)
+    }
+
+    fun testARefusedChangeRevertsTheBoxAndSaysWhy() {
+        val (panel, controls) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        assertTrue(steerBox(panel).isSelected)
+        controls.steerReplies[0](ControlReply.Rejected(HeartbeatPayload(event = "error", reason = "unknown_session", message = "unknown session_id")))
+        assertFalse(steerBox(panel).isSelected)
+        assertTrue(labels(panel).contains("gg rejected a command: unknown_session — unknown session_id"))
+    }
+
+    fun testANewRunStartsWithAgentsLockedOut() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        steerBox(panel).doClick()
+        panel.reset()
+        assertFalse(steerBox(panel).isSelected)
+        assertFalse(shown(panel, steerBox(panel)))
+    }
+
+    fun testTheBoxIsDisabledOnceTheRunIsOver() {
+        val (panel, _) = active(FakeControls().apply { steerSupported = true }, v15)
+        panel.onEnded()
+        assertFalse(steerBox(panel).isEnabled)
     }
 }

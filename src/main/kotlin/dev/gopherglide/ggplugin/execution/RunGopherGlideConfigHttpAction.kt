@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import dev.gopherglide.ggplugin.services.BinaryFeatureGate
 
 /**
  * Config-driven counterpart to [RunGopherGlideHttpAction], shown only when the `.http` file has a
@@ -34,7 +35,11 @@ private fun promptAndRun(project: Project, yamlFile: VirtualFile) {
         }
     }
 
-    GopherGlideExecutor.execute(project, *args.toTypedArray())
+    args.addAll(dialog.sloGuardArgs)
+
+    BinaryFeatureGate.runWith(project, dialog.sloGuardArgs.isNotEmpty()) {
+        GopherGlideExecutor.execute(project, *args.toTypedArray())
+    }
 }
 
 class RunGopherGlideConfigHttpAction : AnAction(

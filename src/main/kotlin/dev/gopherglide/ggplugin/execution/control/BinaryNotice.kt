@@ -26,8 +26,12 @@ object BinaryNotices {
     /** Before any run; null when nothing is known about the binary, so no claim is made. */
     fun idle(installed: InstalledBinary?, latest: GopherGlideVersion?, progress: InstallProgress): BinaryNotice? {
         val version = installed?.version ?: return null
+        if (version.supportsAutopilotAndMcp) {
+            return BinaryNotice("Live Control, Rate Hold and Autopilot available (gg $version)", settingsLink = false, quiet = true)
+        }
         if (version.supportsLiveControl) {
-            return BinaryNotice("Live Control available (gg $version)", settingsLink = false, quiet = true)
+            val hint = "gg ${GopherGlideVersion.MIN_AUTOPILOT_AND_MCP} adds Autopilot, Rate Hold and click-time marks"
+            return BinaryNotice("Live Control available (gg $version)", hint = hint, settingsLink = false, quiet = true)
         }
         return older(installed, latest, runActive = false, progress)
     }

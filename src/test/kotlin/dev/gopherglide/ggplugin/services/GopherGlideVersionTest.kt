@@ -13,6 +13,14 @@ class GopherGlideVersionTest {
         checkNotNull(javaClass.getResourceAsStream("/fixtures/$name")).bufferedReader().readText()
 
     @Test
+    fun autopilotAndMcpStartAtV150() {
+        assertFalse(v("v1.4.9").supportsAutopilotAndMcp)
+        assertTrue(v("v1.5.0").supportsAutopilotAndMcp)
+        assertTrue(v("v1.5.0-dev").supportsAutopilotAndMcp)
+        assertTrue(v("v1.6.2").supportsAutopilotAndMcp)
+    }
+
+    @Test
     fun parsesTagsAndBareNumbers() {
         assertEquals(GopherGlideVersion(1, 3, 0), v("v1.3.0"))
         assertEquals(GopherGlideVersion(1, 3, 0), v("1.3.0"))

@@ -38,6 +38,76 @@ class ControlSessionTest {
             .filter { it.isNotBlank() }.map { gson.fromJson(it, HeartbeatPayload::class.java) }
             .first { it.event == event && it.id == id }
 
+    private fun v15(event: String, id: String): HeartbeatPayload =
+        checkNotNull(javaClass.getResourceAsStream("/fixtures/stream-v150-autopilot.ndjson")).bufferedReader().readLines()
+            .filter { it.isNotBlank() }.map { gson.fromJson(it, HeartbeatPayload::class.java) }
+            .first { it.event == event && it.id == id }
+
+    @Test
+    fun holdReleaseAndAutopilotAreWrittenInOrderWithTheirOwnIds() {
+        val stream = RecordingStream()
+        val session = ControlSession(stream, direct)
+        session.sendHold(15)
+        session.sendRelease()
+        session.startAutopilot("slo-guard", 200, 0.02)
+        session.stopAutopilot()
+        assertEquals(
+            listOf(
+                """{"id":"h_1","command":"hold","rps":15}""",
+                """{"id":"h_2","command":"release"}""",
+                """{"id":"a_1","command":"autopilot","action":"start","mode":"slo-guard","max_p99_ms":200,"max_error_rate":0.02}""",
+                """{"id":"a_2","command":"autopilot","action":"stop"}"""
+            ),
+            stream.lines()
+        )
+    }
+
+    @Test
+    fun holdAckAndAutopilotAckCompleteTheirCommands() {
+        val session = ControlSession(RecordingStream(), direct)
+        val replies = mutableListOf<ControlReply>()
+        session.sendHold(15) { replies += it }
+        session.sendRelease { replies += it }
+        session.startAutopilot("slo-guard", null, null) { replies += it }
+        session.onEvent(v15("ack", "h_1"))
+        session.onEvent(v15("ack", "h_2"))
+        session.onEvent(v15("ack", "a_1"))
+        assertEquals(3, replies.size)
+        assertTrue(replies.all { it is ControlReply.Ack })
+        assertEquals(15, (replies[0] as ControlReply.Ack).payload.holdRps)
+    }
+
+    @Test
+    fun aManualCommandRefusedDuringAnAutopilotIsRejectedNotFailed() {
+        val session = ControlSession(RecordingStream(), direct)
+        var reply: ControlReply? = null
+        session.sendBias(5) { }
+        session.sendBias(5) { reply = it }
+        session.onEvent(v15("error", "b_2"))
+        assertTrue(reply is ControlReply.Rejected)
+        assertEquals("autopilot_active", (reply as ControlReply.Rejected).payload.reason)
+    }
+
+    @Test
+    fun anIdLessEventCompletesNothing() {
+        val session = ControlSession(RecordingStream(), direct)
+        var reply: ControlReply? = null
+        session.sendMark("x") { reply = it }
+        session.onEvent(HeartbeatPayload(event = "mark", label = "autopilot said so", source = "autopilot"))
+        assertEquals(null, reply)
+    }
+
+    @Test
+    fun holdAndAutopilotCommandsAreRefusedOnceStopIsRequested() {
+        val session = ControlSession(RecordingStream(), direct)
+        session.sendStop { }
+        val replies = mutableListOf<ControlReply>()
+        session.sendHold(10) { replies += it }
+        session.stopAutopilot { replies += it }
+        assertTrue(replies.all { it is ControlReply.Failed })
+        assertEquals(2, replies.size)
+    }
+
     @Test
     fun commandIsWrittenAsOneNewlineTerminatedFlushedLine() {
         val stream = RecordingStream()
@@ -90,6 +160,13 @@ class ControlSessionTest {
         session.onEvent(fixture("ack", "b_1"))
         assertTrue(reply is ControlReply.Ack)
         assertEquals(10, (reply as ControlReply.Ack).payload.bias)
+    }
+
+    @Test
+    fun markWithATimeIsWrittenWithIt() {
+        val stream = RecordingStream()
+        ControlSession(stream, direct).sendMark("cache-warm", 18.5)
+        assertEquals("""{"id":"m_1","command":"mark","label":"cache-warm","elapsed_s":18.5}""" + "\n", stream.raw())
     }
 
     @Test

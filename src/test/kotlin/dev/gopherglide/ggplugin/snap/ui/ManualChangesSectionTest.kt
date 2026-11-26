@@ -63,9 +63,9 @@ class ManualChangesSectionTest : BasePlatformTestCase() {
         val table = com.intellij.util.ui.UIUtil.findComponentsOfType(ManualChangesSection(timeline, { false }, { }), ManualChangesTable::class.java).single()
         assertEquals(2, table.rowCount)
         assertEquals(listOf("0:10", "0:20"), (0 until 2).map { table.getValueAt(it, 0) })
-        assertEquals("m", table.getValueAt(0, 2))
-        assertEquals("+5 RPS", table.getValueAt(1, 2))
-        assertEquals("total +5", table.getValueAt(1, 3))
+        assertEquals("m", table.getValueAt(0, 3))
+        assertEquals("+5 RPS", table.getValueAt(1, 3))
+        assertEquals("total +5", table.getValueAt(1, 4))
     }
 
     fun testFiguresAppearOnlyWhenThereAreBiasChanges() {

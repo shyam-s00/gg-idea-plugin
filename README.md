@@ -9,12 +9,54 @@ Run traffic simulations, record and compare performance snapshots, gate regressi
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/run-dashboard.png" alt="The Run tab after an autopilot ceiling search: metric cards, Live Control with a hold badge, and the chart with the autopilot's marks" width="100%">
+</p>
+
+**Native run dashboard.** Live metrics, Live Control (bias, marks, hold, SLO guard) and an RPS chart with every mark drawn on it. This run was a ⚡ ceiling search started by an AI agent.
+
+<table>
+  <tr>
+    <td width="30%" valign="top">
+      <img src="docs/screenshots/profile-picker.png" alt="The Run with Profile popup, with Autopilot: Find Ceiling at the top and all built-in profiles grouped by category">
+      <br><sub><b>Run GG</b> opens the profile picker, with ⚡ Autopilot: Find Ceiling at the top.</sub>
+    </td>
+    <td width="70%" valign="top">
+      <img src="docs/screenshots/snap-view-export.png" alt="The Snapshot View with the autopilot outcome banner, the Manual changes table and the Export as Markdown or HTML menu open">
+      <br><sub><b>Snapshot View</b> shows the autopilot's outcome and every change made during the run. <b>Export</b> saves the mission report as Markdown or HTML.</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/connect-agents.png" alt="The Connect AI Agents dialog showing the shared daemon, mcp.json, agent skill and JetBrains Air status, with options to set each one up" width="60%">
+</p>
+
+**Connect AI agents** in one dialog. It shows what is linked, previews every change, and keeps your other servers and agents.
+
+<p align="center">
+  <img src="docs/screenshots/agent-run.png" alt="A JetBrains Air agent session next to the Run tab, which shows the run the agent started with a Started by AI Agent badge" width="100%">
+</p>
+
+**Agent runs show live.** A run an agent starts opens in the Run tab with a 🤖 badge, and you can take over with **Stop Autopilot (Take Over)**.
+
+<p align="center">
+  <img src="docs/screenshots/acp-runs.png" alt="JetBrains Air's new session box listing the gg autopilot slash commands: dry-run, find-ceiling, slo-guard and triage" width="75%">
+</p>
+
+**In JetBrains Air**, `gg autopilot` offers `/dry-run`, `/find-ceiling`, `/slo-guard` and `/triage`, which need no API key.
+
+---
+
 ## Features
 
 ### ▶ Run traffic simulations from the editor
 
 - **Gutter run icons** on `.http` files:
   - **Run GG** — opens a profile picker with all 21 of gg's built-in load profiles (grouped by category: E-Commerce, Standard Testing/CI, Resilience/Chaos, Auto-Scaling, Specialized), then lets you override peak RPS/duration and optionally record a snapshot before running.
+  - **⚡ Autopilot: Find Ceiling…** (top of the picker, gg v1.5.0+) — gg steps the rate up while health holds, marks where it breaches, confirms the rate it backs off to, and reports the highest sustainable RPS. No LLM involved.
   - **Run GG (Config)** — runs the file's sibling `.gg.yaml` config directly, no profile or overrides — the config owns everything.
   - **Generate config.yaml...** — scaffolds a starter `.gg.yaml` for the file without running anything.
 - **Gutter run icon** on `.gg.yaml` files:
@@ -31,6 +73,7 @@ The **Run** tab in the Gopher Glide tool window shows live, updating roughly onc
 - p50 / p95 / p99 latency
 - A scaled **RPS chart** and a **stage timeline** showing progress through the simulation's stages
 - A **Stop** toolbar button that ends the run cleanly: gg finishes writing the snapshot first, and a second click forces the process to end if it is stuck
+- With gg v1.5.0+: hover the error-rate and latency cards for the last few seconds' health next to the cumulative figures, and a one-line **Recent errors** strip names the failure classes and the endpoints failing most
 
 #### Live control (gg v1.3.0+)
 
@@ -39,7 +82,15 @@ With gg v1.3.0 or newer, a **Live Control** strip sits above the metric cards wh
 - **Bias** — **−10 / −5 / +5 / +10** change the target RPS without stopping the run, and **Reset** returns it to the planned rate. The badge shows the bias gg reports, so it always matches the run.
 - **Mark…** — drop a named marker ("cache-warm", "deploy-v2") at the current point of the run. The last mark and a count appear under the controls; hover for the full list.
 - **On the chart** — each bias change is a tick on the target line and each mark is a dashed line with its label, so you can see which change moved the numbers.
-- A mark is stamped when you confirm its label, not when you click **Mark…**.
+- With gg v1.5.0+, a mark is stamped when you click **Mark…**, not when you confirm its label. With older versions it is stamped when you confirm.
+
+With gg v1.5.0 or newer the strip also has:
+
+- **Hold RPS** — pin the rate at a number you choose, ignoring the profile's ramp, until you click **Release Hold**. A **📌 Hold N RPS** badge shows while it is in force.
+- **🛡️ Guard SLO…** — start gg's built-in SLO guard mid-run with your own p99 and error-rate limits. It clamps the rate when health breaches, then releases it in steps. While an autopilot runs, bias and hold are off and **Stop Autopilot (Take Over)** hands the rate back; a hold it set stays until you release it.
+- Marks the autopilot drops itself ("ceiling breached at 35 RPS…") appear on the chart with a ⚡ prefix; yours carry 👤.
+
+You can also protect a whole run with the SLO guard from the run dialogs (**Protect run with Autopilot SLO Guard**).
 
 With an older gg, the strip is replaced by a short notice that names the installed version and offers to install or upgrade (see below). The run itself works as before.
 
@@ -64,9 +115,11 @@ A single **Gopher Glide** tool window (bottom toolbar) holds two tabs:
 Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to a terminal:
 
 - **Refresh** — reload the snapshot list from disk.
-- **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click). For runs recorded with gg v1.3.0+, a collapsible **Manual changes** section lists every mark and bias change in time order, with four figures beside it: final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshots from older gg versions say that this was not recorded.
-- **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows). When either run had marks or bias changes made by hand, a one-line notice says so, because those runs may not be like for like.
+- **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click). For runs recorded with gg v1.3.0+, a collapsible **Manual changes** section lists every mark, bias change and hold in time order with who made it (👤 you, ⚡ the autopilot), with four figures beside it: final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshots from older gg versions say that this was not recorded. Runs steered by the autopilot also show an outcome banner above the list ("Ceiling found: 28 RPS", the limits, and why it backed off).
+- **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows). When either run had marks, bias changes, holds or an autopilot, a one-line notice says so, because those runs may not be like for like.
 - **Assert...** — run `gg snap assert` between any two snapshots and see a pass/fail breakdown against configurable latency/error-rate/payload-size regression thresholds.
+- **Export Mission Report…** (gg v1.5.0+) — save the selected snapshot's `gg snap report` as Markdown or HTML. In the Snapshot View, **Export as Markdown…** is a split button: its arrow offers **Markdown (.md)** and **HTML (.html)**, the save dialog opens with that file type and name already filled in, and the button remembers your last choice.
+- **Copy PR Markdown** (gg v1.5.0+) — put the same report on the clipboard as Markdown, ready for a pull request description.
 - **Prune...** — delete old snapshots by ID(s), tag, keep-last count, or age, with a dry-run preview before anything is actually deleted.
 
 ### 🚀 One-click CI workflow generator
@@ -77,6 +130,20 @@ Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to 
 - On each PR: restore the latest baseline, run and snapshot the PR build, `gg snap assert` against the baseline, and post (or update) a sticky PR comment with the result — failing the job if a regression is detected.
 
 The generated config path is pre-filled from the first `.gg.yaml` found in the project, and you're prompted before it overwrites an existing `gg.yml`.
+
+### 🤖 AI agents (gg v1.5.0+)
+
+**Tools → Connect AI Agents to Gopher Glide…**, or the **AI Agents** button in the Run tab, connects Claude Code, Cursor, Junie, JetBrains AI Assistant and JetBrains Air to gg, so a run an agent starts shows up live in the Run tab like one of yours.
+
+- **One dialog, nothing silent.** It shows what is linked now (the shared daemon, `.mcp.json`, the agent skill, Air), previews every change (`Preview changes…`), and writes only what you tick. Files are written by `gg mcp init`, which keeps your other servers and agents and never overwrites an entry of your own unless you choose **Replace**. A broken JSON file is reported and left alone.
+- **Workspace `.mcp.json`** gets a `gg` server that attaches to the IDE's daemon (`gg mcp --attach`), so agent runs are visible and steerable here. gg's own default entry starts a private server instead, which the IDE never sees; the dialog upgrades it. When the entry holds a full path to gg, the dialog offers to keep `.mcp.json` out of git.
+- **Agent skill** (`.claude/skills/gg/SKILL.md`) teaches agents the workflow. It is never overwritten once you have edited it.
+- **JetBrains Air**: registers `gg autopilot` in `~/.jetbrains/acp.json` through a small launcher in `~/.jetbrains/gopher-glide/`. Air starts the agent outside your project, so the launcher connects it to the daemon of the IDE that started it, and runs it on its own when that IDE has none (or has several projects open). This is gg's own agent: it does not use JetBrains AI or your Claude account. Its slash commands (`/dry-run`, `/find-ceiling`, `/slo-guard`, `/triage`) need no API key or model, and the built-in autopilot steers by rules, not an LLM. Free-text requests need a model: an optional section takes a Gemini key or an OpenAI-compatible server (kept in a file only you can read).
+- **Claude Code, Cursor, Junie and others** use the workspace `.mcp.json` instead. Their own model decides what to run and how to steer, through gg's MCP tools.
+- **In the Run tab:** an agent's run opens with a **🤖 STARTED BY AI AGENT** badge, and its marks, bias steps and holds appear on the chart with a 🤖 prefix. If you are mid-run, it waits and takes the tab when yours ends. **Stop** and the live controls work on it too.
+- **Your runs stay yours.** AI agents can read a run you started but not steer it until you tick **🤖 Allow AI Steer** (off for every new run). The box appears on runs you start through the shared daemon (turn on **Run my simulations through the shared daemon** in Settings); a direct run is not visible to agents, and a run an agent started is already theirs, so neither shows it. Ticking it only permits steering: an agent has to ask, such as Claude Code adding RPS or dropping a mark.
+- **Limits for agents** (max RPS, max duration, runs at once, and which hosts they may target) are in the dialog and in **Settings → Gopher Glide → Shared daemon**. By default agents may only target the hosts found in this project's `.http` files; your own runs are never limited.
+- The shared daemon is one gg process per project. It starts when you open a connected project (or on your first routed run), and it stops with the IDE. Turn on **Run my simulations through the shared daemon** in Settings to put your own runs through it as well (off by default; a run that can't use it simply runs directly).
 
 ### 📄 Scaffold a new test file
 
@@ -107,8 +174,10 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 
 - **IntelliJ Platform baseline:** `2024.2` (`sinceBuild = 242`)
 - **Live control:** needs `gg` v1.3.0 or newer; older versions run as before, without the controls
+- **Hold, Autopilot, click-time marks, window health, mission reports and AI agents:** need `gg` v1.5.0 or newer; the plugin offers to install it when you ask for one of them on an older binary
 - **Build target:** IntelliJ IDEA Community `2024.2.4`
-- **Developer toolchain:** JDK 21
+- **Plugin Verifier:** compatible with IntelliJ IDEA from `2024.2` to `2026.3`
+- **Developer toolchain:** JDK 21, Gradle 9.9
 
 ### Verified IDEs (2024.2 line)
 
@@ -158,9 +227,27 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` an
 ### Steer a run while it is going
 
 1. Start a run with gg v1.3.0 or newer; the **Live Control** strip appears in the **Run** tab.
-2. Use **+5 / +10 / −5 / −10** to raise or lower the load and **Reset** to go back to the plan.
+2. Use **+5 / +10 / −5 / −10** to raise or lower the load and **Reset** to go back to the plan. With gg v1.5.0+, **Hold RPS** pins the rate instead.
 3. Click **Mark…**, type a label and confirm, to note an event such as a deploy.
 4. Click **Stop** when you are done. With snapshot recording on, the snapshot is saved before the run ends.
+
+### Connect an AI agent
+
+1. Choose **Tools → Connect AI Agents to Gopher Glide…** (or click **AI Agents** in the Run tab).
+2. Tick what to set up, check **Preview changes…** if you like, and click **Apply**. Restart your AI agent, or the IDE for Air, to pick it up.
+3. Ask the agent to run a simulation. It appears in the **Run** tab with a 🤖 badge. To let it steer a run you started, tick **🤖 Allow AI Steer** in the Live Control strip.
+
+### Find your system's ceiling
+
+1. Open a `.http` file and click the **Run GG** gutter icon.
+2. Choose **⚡ Autopilot: Find Ceiling…** at the top of the picker.
+3. Set the starting rate, the cap, your p99 and error-rate limits, and a maximum duration (at least 30 seconds), then run.
+4. The **Run** tab shows the autopilot's progress; when it finishes, the status line gives the result, and with a snapshot recorded the Snapshot View shows the same outcome banner.
+
+### Share a run
+
+1. In the **Snaps** tab, select a snapshot.
+2. Click **Export Mission Report…** to save it as `.md` or `.html`, or **Copy PR Markdown** to paste it into a pull request.
 
 ### Record a snapshot while running
 
@@ -204,6 +291,14 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` an
 ./gradlew build
 ./gradlew runIde
 ```
+
+To try the AI agent features in a sandbox that has JetBrains Air (IntelliJ IDEA 2026.3 Ultimate with the bundled Air plugin), run:
+
+```bash
+./gradlew runIdeAir
+```
+
+Its settings, plugins and logs live in separate `*_runIdeAir` folders under `build/idea-sandbox/`, so it never touches your real IDE. The first run downloads the IDE; it needs network access and brings its own Java 25 runtime.
 
 ### Verify against multiple IDEs
 
