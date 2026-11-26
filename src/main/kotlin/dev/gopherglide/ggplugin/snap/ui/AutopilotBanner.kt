@@ -8,7 +8,7 @@ import java.awt.BorderLayout
 import java.awt.Font
 import javax.swing.JPanel
 
-/** The autopilot's outcome above a snapshot's timeline; hover for how it got there. */
+/** The autopilot's outcome above a snapshot's timeline. */
 class AutopilotBanner(summary: AutopilotSummary) : JPanel(BorderLayout(JBUI.scale(12), 0)) {
     val headline = JBLabel(summary.headline).apply {
         font = font.deriveFont(Font.BOLD)
@@ -27,8 +27,5 @@ class AutopilotBanner(summary: AutopilotSummary) : JPanel(BorderLayout(JBUI.scal
         )
         add(headline, BorderLayout.WEST)
         add(detail, BorderLayout.CENTER)
-        toolTipText = summary.trail.takeIf { it.isNotEmpty() }?.joinToString(
-            separator = "<br>", prefix = "<html><b>Autopilot events</b> (time since it started)<br>", postfix = "</html>"
-        ) { it.replace("&", "&amp;").replace("<", "&lt;") }
     }
 }

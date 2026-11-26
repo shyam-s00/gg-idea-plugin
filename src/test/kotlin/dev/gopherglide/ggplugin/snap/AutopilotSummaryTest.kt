@@ -38,14 +38,6 @@ class AutopilotSummaryTest {
     }
 
     @Test
-    fun theTrailListsEveryEventWithTimeSinceTheAutopilotStarted() {
-        val trail = AutopilotSummary.from(autopilot("snap-v150-autopilot.snap"))!!.trail
-        assertEquals(3, trail.size)
-        assertTrue(trail[1], trail[1].startsWith("+0:02 clamped (17 RPS)"))
-        assertTrue(trail[0], trail[0].startsWith("+0:00 watching"))
-    }
-
-    @Test
     fun anUnstableSearchIsAWarning() {
         val summary = AutopilotSummary.from(SnapAutopilot(mode = "find-ceiling", outcome = "unstable"))!!
         assertEquals(Tone.WARN, summary.tone)

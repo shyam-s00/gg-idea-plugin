@@ -1,6 +1,8 @@
 package dev.gopherglide.ggplugin.snap.ui
 
 import com.google.gson.Gson
+import com.intellij.ide.util.PropertiesComponent
+import com.intellij.openapi.ui.OptionAction
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -20,7 +22,8 @@ class SnapViewDialogTest : BasePlatformTestCase() {
         val rootPane: JComponent get() = content
 
         @Suppress("UNCHECKED_CAST")
-        val leftActions: List<String> = (call("createLeftSideActions") as Array<Action>).map { it.getValue(Action.NAME) as String }
+        val leftActionObjects: Array<Action> = call("createLeftSideActions") as Array<Action>
+        val leftActions: List<String> = leftActionObjects.map { it.getValue(Action.NAME) as String }
 
         private fun call(name: String): Any =
             SnapViewDialog::class.java.getDeclaredMethod(name).apply { isAccessible = true }.invoke(dialog)
@@ -43,7 +46,6 @@ class SnapViewDialogTest : BasePlatformTestCase() {
             val banner = UIUtil.findComponentsOfType(dialog.rootPane, AutopilotBanner::class.java).single()
             assertEquals("⚡ Autopilot Find Ceiling: Ceiling found: 28 RPS", banner.headline.text)
             assertTrue(banner.detail.text.startsWith("Limits: p99 ≤ 250ms"))
-            assertTrue(banner.toolTipText.contains("+0:07 stepping (13 RPS)"))
         }
     }
 
@@ -65,7 +67,29 @@ class SnapViewDialogTest : BasePlatformTestCase() {
 
     fun testTheReportActionsAreOfferedInTheDialog() {
         withDialog(snap("snap-v150-autopilot.snap")) { dialog ->
-            assertEquals(listOf("📄 Export Mission Report…", "Copy PR Markdown"), dialog.leftActions)
+            assertEquals(listOf("📄 Export as Markdown…", "Copy PR Markdown"), dialog.leftActions)
+        }
+    }
+
+    fun testTheExportButtonOffersEachFormatAndRemembersThePick() {
+        val key = "gopherglide.snap.report.format"
+        PropertiesComponent.getInstance().unsetValue(key)
+        try {
+            withDialog(snap("snap-v150-autopilot.snap")) { dialog ->
+                val export = dialog.leftActionObjects.first() as OptionAction
+                assertEquals(listOf("Markdown (.md)", "HTML (.html)"), export.options.map { it.getValue(Action.NAME) })
+                PropertiesComponent.getInstance().setValue(key, "html")
+            }
+            withDialog(snap("snap-v150-autopilot.snap")) { dialog -> assertEquals("📄 Export as HTML…", dialog.leftActions.first()) }
+        } finally {
+            PropertiesComponent.getInstance().unsetValue(key)
+        }
+    }
+
+    fun testTheAutopilotBannerCarriesNoHoverPopup() {
+        withDialog(snap("snap-v150-autopilot.snap")) { dialog ->
+            val banner = UIUtil.findComponentsOfType(dialog.rootPane, AutopilotBanner::class.java).single()
+            assertNull(banner.toolTipText)
         }
     }
 

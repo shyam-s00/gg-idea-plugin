@@ -38,6 +38,11 @@ class SnapReportTest {
     }
 
     @Test
+    fun theDefaultFileNameTakesTheChosenFormat() {
+        assertEquals("ceiling-v2-report.html", SnapReport.defaultFileName(SnapModel(id = "x", meta = SnapMeta(tag = "ceiling-v2")), SnapReport.Format.HTML))
+    }
+
+    @Test
     fun anUntaggedSnapshotFallsBackToItsId() {
         assertEquals("20261124-023924-report.md", SnapReport.defaultFileName(SnapModel(id = "20261124-023924", meta = SnapMeta())))
         assertEquals("snapshot-report.md", SnapReport.defaultFileName(SnapModel()))

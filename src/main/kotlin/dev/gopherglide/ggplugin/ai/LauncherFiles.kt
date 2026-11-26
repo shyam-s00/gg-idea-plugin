@@ -7,8 +7,8 @@ import java.nio.file.attribute.PosixFilePermissions
 
 /**
  * The small wrapper the JetBrains ACP entry runs instead of `gg`, and the files it reads. For `autopilot` it
- * points gg at the IDE's daemon: the one for the current folder, else the only live one (Air starts the
- * agent outside the project); otherwise gg runs on its own.
+ * points gg at the IDE's daemon: the one for the current folder, else the only live one of the IDE that
+ * started the agent (Air starts it outside the project); otherwise gg runs on its own.
  * The daemon's token lives in a `0600` file next to the script, never in the script.
  */
 class LauncherFiles(val dir: Path, private val windows: Boolean = System.getProperty("os.name").lowercase().contains("win")) {
@@ -46,10 +46,10 @@ class LauncherFiles(val dir: Path, private val windows: Boolean = System.getProp
     }
 
     /** Lets the launcher find the daemon started in [workDir]; the token file is readable by this user only. */
-    fun publishDaemon(workDir: String, info: DaemonInfo) {
+    fun publishDaemon(workDir: String, info: DaemonInfo, idePid: Long = ProcessHandle.current().pid()) {
         if (!isInstalled()) return
         Files.createDirectories(daemons)
-        val text = "url=${info.baseUrl}/mcp\ntoken=${info.token}\npid=${info.pid}\n"
+        val text = "url=${info.baseUrl}/mcp\ntoken=${info.token}\npid=${info.pid}\nide=$idePid\n"
         keysFor(workDir).forEach { writePrivate(daemons.resolve("$it.txt"), text) }
     }
 
@@ -97,24 +97,29 @@ class LauncherFiles(val dir: Path, private val windows: Boolean = System.getProp
             |  URL=${'$'}(sed -n 's/^url=//p' "${'$'}1")
             |  TOKEN=${'$'}(sed -n 's/^token=//p' "${'$'}1")
             |  PID=${'$'}(sed -n 's/^pid=//p' "${'$'}1")
+            |  IDE=${'$'}(sed -n 's/^ide=//p' "${'$'}1")
             |  [ -n "${'$'}URL" ] && [ -n "${'$'}TOKEN" ] && [ -n "${'$'}PID" ] && kill -0 "${'$'}PID" 2>/dev/null
+            |}
+            |scan() {
+            |  N=0
+            |  SEEN=" "
+            |  FOUND=""
+            |  for F in "${'$'}DIR"/daemons/*.txt; do
+            |    if pick "${'$'}F" && [ "${'$'}IDE" = "${'$'}1" ]; then
+            |      case "${'$'}SEEN" in
+            |        *" ${'$'}PID "*) ;;
+            |        *) SEEN="${'$'}SEEN${'$'}PID "; N=${'$'}((N + 1)); FOUND="${'$'}F" ;;
+            |      esac
+            |    fi
+            |  done
             |}
             |resolve() {
             |  URL=""
             |  TOKEN=""
             |  KEY=${'$'}(printf '%s' "${'$'}PWD" | tr '\\/: ' '____')
             |  if ! pick "${'$'}DIR/daemons/${'$'}KEY.txt"; then
-            |    N=0
-            |    SEEN=" "
-            |    FOUND=""
-            |    for F in "${'$'}DIR"/daemons/*.txt; do
-            |      if pick "${'$'}F"; then
-            |        case "${'$'}SEEN" in
-            |          *" ${'$'}PID "*) ;;
-            |          *) SEEN="${'$'}SEEN${'$'}PID "; N=${'$'}((N + 1)); FOUND="${'$'}F" ;;
-            |        esac
-            |      fi
-            |    done
+            |    scan "${'$'}PPID"
+            |    [ "${'$'}N" -eq 0 ] && scan ""
             |    if [ "${'$'}N" -ne 1 ] || ! pick "${'$'}FOUND"; then URL=""; TOKEN=""; fi
             |  fi
             |}

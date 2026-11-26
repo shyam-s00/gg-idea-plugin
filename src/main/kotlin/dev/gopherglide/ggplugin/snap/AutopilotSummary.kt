@@ -1,11 +1,10 @@
 package dev.gopherglide.ggplugin.snap
 
 import dev.gopherglide.ggplugin.execution.annotations.AnnotationSource
-import dev.gopherglide.ggplugin.execution.annotations.formatElapsed
 import dev.gopherglide.ggplugin.execution.autopilot.AutopilotOutcomes
 
 /** The headline and details of the autopilot outcome banner shown above a snapshot's timeline. */
-data class AutopilotSummary(val headline: String, val detail: String, val trail: List<String>, val tone: Tone) {
+data class AutopilotSummary(val headline: String, val detail: String, val tone: Tone) {
     enum class Tone { GOOD, NEUTRAL, WARN }
 
     companion object {
@@ -26,19 +25,13 @@ data class AutopilotSummary(val headline: String, val detail: String, val trail:
                 "unstable" -> Tone.WARN
                 else -> Tone.NEUTRAL
             }
-            return AutopilotSummary(headline, parts.joinToString(" · "), events.map(::trailLine), tone)
+            return AutopilotSummary(headline, parts.joinToString(" · "), tone)
         }
 
         private fun limits(params: SnapAutopilotParams?): String? {
             val p99 = params?.maxP99Ms?.let { "p99 ≤ ${trim(it)}ms" }
             val errors = params?.maxErrorRate?.let { "errors ≤ ${trim(it * 100)}%" }
             return listOfNotNull(p99, errors).takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = "Limits: ")
-        }
-
-        private fun trailLine(event: SnapAutopilotEvent): String {
-            val rate = event.holdRps?.let { " ($it RPS)" }.orEmpty()
-            val why = event.reason?.let { " — $it" }.orEmpty()
-            return "+${formatElapsed(event.elapsedSeconds)} ${event.state}$rate$why"
         }
 
         private fun trim(value: Double): String =

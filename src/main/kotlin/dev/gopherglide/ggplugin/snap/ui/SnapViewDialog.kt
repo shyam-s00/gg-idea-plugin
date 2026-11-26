@@ -1,7 +1,9 @@
 package dev.gopherglide.ggplugin.snap.ui
 
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.openapi.ui.OptionAction
 import com.intellij.ui.JBColor
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
@@ -11,6 +13,7 @@ import dev.gopherglide.ggplugin.snap.EndpointSnap
 import dev.gopherglide.ggplugin.snap.RunTimeline
 import dev.gopherglide.ggplugin.snap.SnapModel
 import dev.gopherglide.ggplugin.snap.SnapOrigin
+import dev.gopherglide.ggplugin.snap.SnapReport
 import dev.gopherglide.ggplugin.snap.actions.SnapReportActions
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -32,13 +35,36 @@ class SnapViewDialog(private val project: Project, private val snap: SnapModel) 
     override fun createActions(): Array<Action> = arrayOf(okAction)
 
     override fun createLeftSideActions(): Array<Action> = arrayOf(
-        object : AbstractAction("📄 Export Mission Report…") {
-            override fun actionPerformed(e: ActionEvent) = SnapReportActions.export(project, snap, contentPane)
-        },
+        ExportButton(),
         object : AbstractAction("Copy PR Markdown") {
             override fun actionPerformed(e: ActionEvent) = SnapReportActions.copyMarkdown(project, snap, contentPane)
         }
     )
+
+    /** Exports in the format used last (Markdown at first); the arrow offers each format and remembers the pick. */
+    private inner class ExportButton : AbstractAction(), OptionAction {
+        init {
+            rename()
+        }
+
+        override fun actionPerformed(e: ActionEvent) = SnapReportActions.export(project, snap, contentPane, chosen())
+
+        override fun getOptions(): Array<Action> = SnapReport.Format.values().map { format ->
+            object : AbstractAction("${format.label} (.${format.flag})") {
+                override fun actionPerformed(e: ActionEvent) {
+                    PropertiesComponent.getInstance().setValue(FORMAT_KEY, format.flag)
+                    rename()
+                    SnapReportActions.export(project, snap, contentPane, format)
+                }
+            } as Action
+        }.toTypedArray()
+
+        private fun chosen(): SnapReport.Format =
+            SnapReport.Format.values().firstOrNull { it.flag == PropertiesComponent.getInstance().getValue(FORMAT_KEY) }
+                ?: SnapReport.Format.MARKDOWN
+
+        private fun rename() = putValue(NAME, "📄 Export as ${chosen().label}…")
+    }
 
     override fun createCenterPanel(): JComponent {
         val root = JPanel(BorderLayout())
@@ -138,6 +164,8 @@ class SnapViewDialog(private val project: Project, private val snap: SnapModel) 
     }
 
     companion object {
+        private const val FORMAT_KEY = "gopherglide.snap.report.format"
+
         fun displayTag(snap: SnapModel): String = snap.meta?.tag?.ifBlank { null } ?: "(untagged)"
 
         private fun samplingSummary(meta: dev.gopherglide.ggplugin.snap.SnapMeta?): String {

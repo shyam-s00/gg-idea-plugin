@@ -20,9 +20,9 @@ import java.io.File
 
 /** Saves a snapshot's mission report to a file, or puts it on the clipboard as Markdown for a pull request. */
 object SnapReportActions {
-    fun export(project: Project, snap: SnapModel, parent: Component? = null) {
+    fun export(project: Project, snap: SnapModel, parent: Component? = null, format: SnapReport.Format = SnapReport.Format.MARKDOWN) {
         BinaryFeatureGate.ensure(project, BinaryFeatureGate.REPORTS, parent) {
-            val target = chooseFile(project, snap, parent) ?: return@ensure
+            val target = chooseFile(project, snap, parent, format) ?: return@ensure
             SnapCliRunner.run(project, SnapReport.exportArgs(snapPath(snap), target.absolutePath), parent) { output ->
                 if (output.exitCode == 0) {
                     GopherGlideNotifications.info(project, "Report saved to ${target.name}", openAction(project, target))
@@ -46,13 +46,13 @@ object SnapReportActions {
         }
     }
 
-    private fun chooseFile(project: Project, snap: SnapModel, parent: Component?): File? {
-        val descriptor = FileSaverDescriptor("Export Mission Report", "Save as Markdown (.md) or HTML (.html)", "md", "html")
+    private fun chooseFile(project: Project, snap: SnapModel, parent: Component?, format: SnapReport.Format): File? {
+        val descriptor = FileSaverDescriptor("Export Mission Report", "Save as ${format.label} (.${format.flag})", format.flag)
         val factory = FileChooserFactory.getInstance()
         val dialog = if (parent != null) factory.createSaveFileDialog(descriptor, parent) else factory.createSaveFileDialog(descriptor, project)
-        val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, SnapReport.defaultFileName(snap)) ?: return null
+        val wrapper = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, SnapReport.defaultFileName(snap, format)) ?: return null
         val file = wrapper.file
-        return if (file.extension.lowercase() in setOf("md", "html", "htm")) file else File(file.path + ".md")
+        return if (file.extension.lowercase() in setOf("md", "html", "htm")) file else File(file.path + "." + format.flag)
     }
 
     private fun openAction(project: Project, file: File) = NotificationAction.createSimple("Open") {

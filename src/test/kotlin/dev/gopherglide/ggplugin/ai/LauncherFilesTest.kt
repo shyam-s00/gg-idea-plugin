@@ -68,9 +68,9 @@ class LauncherFilesTest {
         files.publishDaemon("/work/proj", info)
         assertFalse(Files.exists(files.dir.resolve("daemons")))
         files.install("/opt/gg")
-        files.publishDaemon("/work/proj", info)
+        files.publishDaemon("/work/proj", info, idePid = 4242)
         val lines = Files.readAllLines(files.dir.resolve("daemons/_work_proj.txt"))
-        assertEquals(listOf("url=http://127.0.0.1:5555/mcp", "token=super-secret-token-0123456789", "pid=${info.pid}"), lines)
+        assertEquals(listOf("url=http://127.0.0.1:5555/mcp", "token=super-secret-token-0123456789", "pid=${info.pid}", "ide=4242"), lines)
     }
 
     @Test
@@ -182,6 +182,41 @@ class LauncherFilesTest {
         files.publishDaemon(tmp.newFolder("a").toString(), info)
         files.publishDaemon(tmp.newFolder("b").toString(), info.copy(baseUrl = "http://127.0.0.1:1111", pid = ProcessHandle.current().parent().get().pid()))
         assertEquals("URL= TOKEN= KEY= ARGS=autopilot", run(files, tmp.newFolder("here"), "autopilot"))
+    }
+
+    @Test
+    fun anAgentStartedOutsideAnyProjectUsesTheDaemonOfTheIdeThatStartedIt() {
+        assumeFalse(windows)
+        val files = launcher().also { it.install(stub().toString()) }
+        val otherIde = ProcessHandle.current().parent().get().pid()
+        files.publishDaemon(tmp.newFolder("a").toString(), info.copy(baseUrl = "http://127.0.0.1:1111", pid = otherIde), idePid = otherIde)
+        files.publishDaemon(tmp.newFolder("b").toString(), info)
+        assertEquals(
+            "URL=http://127.0.0.1:5555/mcp TOKEN=super-secret-token-0123456789 KEY= ARGS=autopilot",
+            run(files, tmp.newFolder("here"), "autopilot")
+        )
+    }
+
+    @Test
+    fun anotherIdesDaemonIsNeverUsed() {
+        assumeFalse(windows)
+        val files = launcher().also { it.install(stub().toString()) }
+        files.publishDaemon(tmp.newFolder("a").toString(), info, idePid = ProcessHandle.current().parent().get().pid())
+        assertEquals("URL= TOKEN= KEY= ARGS=autopilot", run(files, tmp.newFolder("here"), "autopilot"))
+    }
+
+    @Test
+    fun aDaemonFileWithoutAnIdeStillCountsWhenNoDaemonBelongsToThisIde() {
+        assumeFalse(windows)
+        val files = launcher().also { it.install(stub().toString()) }
+        files.publishDaemon(tmp.newFolder("a").toString(), info)
+        Files.list(files.dir.resolve("daemons")).use { it.toList() }.forEach { file ->
+            Files.writeString(file, Files.readAllLines(file).filterNot { it.startsWith("ide=") }.joinToString("\n", postfix = "\n"))
+        }
+        assertEquals(
+            "URL=http://127.0.0.1:5555/mcp TOKEN=super-secret-token-0123456789 KEY= ARGS=autopilot",
+            run(files, tmp.newFolder("here"), "autopilot")
+        )
     }
 
     @Test
