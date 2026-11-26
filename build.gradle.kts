@@ -1,11 +1,11 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.1.20"
-    id("org.jetbrains.intellij.platform") version "2.10.2"
+    id("org.jetbrains.kotlin.jvm") version "2.4.21"
+    id("org.jetbrains.intellij.platform") version "2.20.1"
 }
 
 group = "dev.gopherglide.gg-plugin"
-version = project.findProperty("pluginVersion") ?: "7.9.0"
+version = project.findProperty("pluginVersion") ?: "8.0.0"
 
 repositories {
     mavenCentral()
@@ -86,6 +86,19 @@ intellijPlatform {
     }
 }
 
+intellijPlatformTesting {
+    runIde {
+        register("runIdeAir") {
+            type = org.jetbrains.intellij.platform.gradle.IntelliJPlatformType.IntellijIdeaUltimate
+            version = "2026.3"
+
+            plugins {
+                bundledPlugins("com.intellij.air")
+            }
+        }
+    }
+}
+
 tasks {
     withType<JavaCompile> {
         sourceCompatibility = "21"
@@ -96,5 +109,6 @@ tasks {
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        jvmDefault.set(org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode.NO_COMPATIBILITY)
     }
 }

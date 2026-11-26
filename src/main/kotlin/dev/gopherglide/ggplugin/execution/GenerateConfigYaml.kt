@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
@@ -43,7 +43,7 @@ object GenerateConfigYaml {
                 newYaml.setBinaryContent(content.toByteArray(Charsets.UTF_8))
 
                 ApplicationManager.getApplication().invokeLater {
-                    FileEditorManager.getInstance(project).openFile(newYaml, true)
+                    OpenFileDescriptor(project, newYaml).navigate(true)
                 }
             } catch (ex: Exception) {
                 ex.printStackTrace()

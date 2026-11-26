@@ -9,6 +9,7 @@ import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
@@ -48,9 +49,9 @@ class CreateGopherGlideTestAction : AnAction(
             file.setBinaryContent(TEMPLATE_CONTENT.toByteArray(Charsets.UTF_8))
 
             ApplicationManager.getApplication().invokeLater {
-                val editor = FileEditorManager.getInstance(project)
-                    .openTextEditor(OpenFileDescriptor(project, file), true)
-                selectUrlPlaceholder(editor)
+                val opened = OpenFileDescriptor(project, file).navigateInEditor(project, true)
+                val editor = if (opened) FileEditorManager.getInstance(project).selectedTextEditor else null
+                selectUrlPlaceholder(editor?.takeIf { FileDocumentManager.getInstance().getFile(it.document) == file })
             }
         }
     }

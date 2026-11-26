@@ -9,6 +9,47 @@ Run traffic simulations, record and compare performance snapshots, gate regressi
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/run-dashboard.png" alt="The Run tab after an autopilot ceiling search: metric cards, Live Control with a hold badge, and the chart with the autopilot's marks" width="100%">
+</p>
+
+**Native run dashboard.** Live metrics, Live Control (bias, marks, hold, SLO guard) and an RPS chart with every mark drawn on it. This run was a ⚡ ceiling search started by an AI agent.
+
+<table>
+  <tr>
+    <td width="30%" valign="top">
+      <img src="docs/screenshots/profile-picker.png" alt="The Run with Profile popup, with Autopilot: Find Ceiling at the top and all built-in profiles grouped by category">
+      <br><sub><b>Run GG</b> opens the profile picker, with ⚡ Autopilot: Find Ceiling at the top.</sub>
+    </td>
+    <td width="70%" valign="top">
+      <img src="docs/screenshots/snap-view-export.png" alt="The Snapshot View with the autopilot outcome banner, the Manual changes table and the Export as Markdown or HTML menu open">
+      <br><sub><b>Snapshot View</b> shows the autopilot's outcome and every change made during the run. <b>Export</b> saves the mission report as Markdown or HTML.</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/connect-agents.png" alt="The Connect AI Agents dialog showing the shared daemon, mcp.json, agent skill and JetBrains Air status, with options to set each one up" width="60%">
+</p>
+
+**Connect AI agents** in one dialog. It shows what is linked, previews every change, and keeps your other servers and agents.
+
+<p align="center">
+  <img src="docs/screenshots/agent-run.png" alt="A JetBrains Air agent session next to the Run tab, which shows the run the agent started with a Started by AI Agent badge" width="100%">
+</p>
+
+**Agent runs show live.** A run an agent starts opens in the Run tab with a 🤖 badge, and you can take over with **Stop Autopilot (Take Over)**.
+
+<p align="center">
+  <img src="docs/screenshots/acp-runs.png" alt="JetBrains Air's new session box listing the gg autopilot slash commands: dry-run, find-ceiling, slo-guard and triage" width="75%">
+</p>
+
+**In JetBrains Air**, `gg autopilot` offers `/dry-run`, `/find-ceiling`, `/slo-guard` and `/triage`, which need no API key.
+
+---
+
 ## Features
 
 ### ▶ Run traffic simulations from the editor
@@ -77,7 +118,7 @@ Toolbar actions inside the Snaps tab — all native dialogs, nothing streams to 
 - **View Detail** — a master-detail view: a metadata header (date, requests, peak RPS, profile, config hash, sampling rate) above a searchable, column-configurable endpoint table, with a detail pane showing the endpoint's inferred JSON schema (as a tree with real type icons, presence %, and stability) and its status-code distribution — including a synthetic "connection errors" bucket for failures that never returned an HTTP status (select one row, or double-click). For runs recorded with gg v1.3.0+, a collapsible **Manual changes** section lists every mark, bias change and hold in time order with who made it (👤 you, ⚡ the autopilot), with four figures beside it: final bias, peak bias, how long a bias was in effect, and when the first change happened. Snapshots from older gg versions say that this was not recorded. Runs steered by the autopilot also show an outcome banner above the list ("Ceiling found: 28 RPS", the limits, and why it backed off).
 - **Compare (Diff)** — the same master-detail layout for comparing two snapshots: a comparative Baseline/Target header, a mismatch warning if the two runs used different profiles or configs, and a detail pane with a full **schema diff** (added/removed/changed fields) and a side-by-side status distribution comparison. Endpoint and schema changes are shown as a current value plus a ▲/▼ delta, with NEW/GONE/CHANGED tags, instead of a "before → after" pair (select exactly two rows). When either run had marks, bias changes, holds or an autopilot, a one-line notice says so, because those runs may not be like for like.
 - **Assert...** — run `gg snap assert` between any two snapshots and see a pass/fail breakdown against configurable latency/error-rate/payload-size regression thresholds.
-- **Export Mission Report…** (gg v1.5.0+) — save the selected snapshot's `gg snap report` as Markdown or HTML (by file extension).
+- **Export Mission Report…** (gg v1.5.0+) — save the selected snapshot's `gg snap report` as Markdown or HTML. In the Snapshot View, **Export as Markdown…** is a split button: its arrow offers **Markdown (.md)** and **HTML (.html)**, the save dialog opens with that file type and name already filled in, and the button remembers your last choice.
 - **Copy PR Markdown** (gg v1.5.0+) — put the same report on the clipboard as Markdown, ready for a pull request description.
 - **Prune...** — delete old snapshots by ID(s), tag, keep-last count, or age, with a dry-run preview before anything is actually deleted.
 
@@ -97,9 +138,10 @@ The generated config path is pre-filled from the first `.gg.yaml` found in the p
 - **One dialog, nothing silent.** It shows what is linked now (the shared daemon, `.mcp.json`, the agent skill, Air), previews every change (`Preview changes…`), and writes only what you tick. Files are written by `gg mcp init`, which keeps your other servers and agents and never overwrites an entry of your own unless you choose **Replace**. A broken JSON file is reported and left alone.
 - **Workspace `.mcp.json`** gets a `gg` server that attaches to the IDE's daemon (`gg mcp --attach`), so agent runs are visible and steerable here. gg's own default entry starts a private server instead, which the IDE never sees; the dialog upgrades it. When the entry holds a full path to gg, the dialog offers to keep `.mcp.json` out of git.
 - **Agent skill** (`.claude/skills/gg/SKILL.md`) teaches agents the workflow. It is never overwritten once you have edited it.
-- **JetBrains Air**: registers `gg autopilot` in `~/.jetbrains/acp.json` through a small launcher in `~/.jetbrains/gopher-glide/` that connects the agent to your project's daemon when it is running. Its slash commands (`/dry-run`, `/find-ceiling`, `/slo-guard`, `/triage`) need no API key; an optional section takes a Gemini key or an OpenAI-compatible server for open-ended questions (kept in a file only you can read).
+- **JetBrains Air**: registers `gg autopilot` in `~/.jetbrains/acp.json` through a small launcher in `~/.jetbrains/gopher-glide/`. Air starts the agent outside your project, so the launcher connects it to the daemon of the IDE that started it, and runs it on its own when that IDE has none (or has several projects open). This is gg's own agent: it does not use JetBrains AI or your Claude account. Its slash commands (`/dry-run`, `/find-ceiling`, `/slo-guard`, `/triage`) need no API key or model, and the built-in autopilot steers by rules, not an LLM. Free-text requests need a model: an optional section takes a Gemini key or an OpenAI-compatible server (kept in a file only you can read).
+- **Claude Code, Cursor, Junie and others** use the workspace `.mcp.json` instead. Their own model decides what to run and how to steer, through gg's MCP tools.
 - **In the Run tab:** an agent's run opens with a **🤖 STARTED BY AI AGENT** badge, and its marks, bias steps and holds appear on the chart with a 🤖 prefix. If you are mid-run, it waits and takes the tab when yours ends. **Stop** and the live controls work on it too.
-- **Your runs stay yours.** AI agents can read a run you started but not steer it until you tick **🤖 Allow AI Steer** (off for every new run).
+- **Your runs stay yours.** AI agents can read a run you started but not steer it until you tick **🤖 Allow AI Steer** (off for every new run). The box appears on runs you start through the shared daemon (turn on **Run my simulations through the shared daemon** in Settings); a direct run is not visible to agents, and a run an agent started is already theirs, so neither shows it. Ticking it only permits steering: an agent has to ask, such as Claude Code adding RPS or dropping a mark.
 - **Limits for agents** (max RPS, max duration, runs at once, and which hosts they may target) are in the dialog and in **Settings → Gopher Glide → Shared daemon**. By default agents may only target the hosts found in this project's `.http` files; your own runs are never limited.
 - The shared daemon is one gg process per project. It starts when you open a connected project (or on your first routed run), and it stops with the IDE. Turn on **Run my simulations through the shared daemon** in Settings to put your own runs through it as well (off by default; a run that can't use it simply runs directly).
 
@@ -134,7 +176,8 @@ File path references inside `.gg.yaml` config files are clickable — `Ctrl+Clic
 - **Live control:** needs `gg` v1.3.0 or newer; older versions run as before, without the controls
 - **Hold, Autopilot, click-time marks, window health, mission reports and AI agents:** need `gg` v1.5.0 or newer; the plugin offers to install it when you ask for one of them on an older binary
 - **Build target:** IntelliJ IDEA Community `2024.2.4`
-- **Developer toolchain:** JDK 21
+- **Plugin Verifier:** compatible with IntelliJ IDEA from `2024.2` to `2026.3`
+- **Developer toolchain:** JDK 21, Gradle 9.9
 
 ### Verified IDEs (2024.2 line)
 
@@ -248,6 +291,14 @@ Any IDE based on IntelliJ Platform `2024.2+` that includes the bundled `JSON` an
 ./gradlew build
 ./gradlew runIde
 ```
+
+To try the AI agent features in a sandbox that has JetBrains Air (IntelliJ IDEA 2026.3 Ultimate with the bundled Air plugin), run:
+
+```bash
+./gradlew runIdeAir
+```
+
+Its settings, plugins and logs live in separate `*_runIdeAir` folders under `build/idea-sandbox/`, so it never touches your real IDE. The first run downloads the IDE; it needs network access and brings its own Java 25 runtime.
 
 ### Verify against multiple IDEs
 
